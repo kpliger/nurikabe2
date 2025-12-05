@@ -1,0 +1,23 @@
+#tictactoe{
+    // @import url('bootstrap/dist/css/bootstrap.css');
+    // @import url('bootstrap-vue/dist/bootstrap-vue.css');
+
+
+    #wrap_board{
+        display: inline-block;
+        border:1px solid;
+        &>div{
+            display: flex;
+            &>.square{
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 4em;
+                width: 1.2em;
+                aspect-ratio: 1;
+                border:1px solid
+            }
+        }
+    }
+
+}

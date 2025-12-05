@@ -1,0 +1,16 @@
+#tictactoe #wrap_board {
+  display: inline-block;
+  border: 1px solid;
+}
+#tictactoe #wrap_board > div {
+  display: flex;
+}
+#tictactoe #wrap_board > div > .square {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 4em;
+  width: 1.2em;
+  aspect-ratio: 1;
+  border: 1px solid;
+}/*# sourceMappingURL=tictactoe.css.map */
