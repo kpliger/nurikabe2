@@ -70,25 +70,25 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
-      # - name: FTP Deploy
-      #   uses: SamKirkland/FTP-Deploy-Action@v4.3.3 # Use the FTP Deploy action
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.3 # Use the FTP Deploy action
+        with:
+          server: ${{ secrets.INFINITYFREE_SERVER }}
+          username: ${{ secrets.INFINITYFREE_USERNAME }}
+          password: ${{ secrets.INFINITYFREE_PASSWORD }}
+          server-dir: '/htdocs/nurikabe/'
+
+      # - name: Login to Azure
+      #   uses: azure/login@v2
       #   with:
-      #     server: ${{ secrets.INFINITYFREE_SERVER }}
-      #     username: ${{ secrets.INFINITYFREE_USERNAME }}
-      #     password: ${{ secrets.INFINITYFREE_PASSWORD }}
-      #     server-dir: '/nurikabe/'
+      #     client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_75E7814C7517484C8425D1487041AD05 }}
+      #     tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_3E4E7DB47FAF427BAD3E0C2CF25BCEAE }}
+      #     subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_07704910902A43FCB1112EE00C097D82 }}
 
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_75E7814C7517484C8425D1487041AD05 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_3E4E7DB47FAF427BAD3E0C2CF25BCEAE }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_07704910902A43FCB1112EE00C097D82 }}
-
-      - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
-        with:
-          app-name: 'nurikabe'
-          slot-name: 'Production'
-          package: .
+      # - name: 'Deploy to Azure Web App'
+      #   uses: azure/webapps-deploy@v3
+      #   id: deploy-to-webapp
+      #   with:
+      #     app-name: 'nurikabe'
+      #     slot-name: 'Production'
+      #     package: .
