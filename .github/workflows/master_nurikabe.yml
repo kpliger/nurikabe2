@@ -46,7 +46,9 @@ jobs:
         run: npm run build
 
       - name: Zip the application files
-        run: zip -r release.zip ./*
+        run: zip -r release.zip ./* -x \
+          node_modules/**\* \
+          vendor/**\*
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
