@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Link, Head } from '@inertiajs/vue3';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -24,6 +24,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 			}
 		}
 	}
+	.page-link{
+		text-decoration: underline;
+	}
 </style>
 
 <template>
@@ -44,7 +47,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 			</div>
 			<div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border md:min-h-min">
 				<div id='overview' style="padding:.5em;">
-					<p>The project is about to implement helper function to solve the nurikabe</p>
+					<p>The project is about to implement helper function to solve the nurikabe.
+						Go to <Link :href="route('Board')" class='page-link'>board</Link> to start playing.</p>
 					<br>
 					<p>Features</p>
 					<ul>

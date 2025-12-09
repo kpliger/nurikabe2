@@ -84,7 +84,7 @@ table#gameboard {
     margin: 0.5em auto;
     position: relative;
     table-layout: fixed;
-    width: calc(var(--sqr_size) * var(--col_count) * 1.7);
+    width: calc(var(--sqr_size) * var(--col_count));
     background-color: rgb(237, 241, 251);
 
     @media (prefers-color-scheme: dark) {
@@ -194,7 +194,7 @@ table#gameboard.zoomed {
         }
     }
     input[type='radio'] {
-        display: none;
+        appearance: none;
     }
     & > label:has(input[type='radio']:checked) {
         background-color: var(--option-color);

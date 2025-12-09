@@ -15,9 +15,8 @@ import 'vue-loading-overlay/dist/css/index.css';
 //VueDatePicker: https://vue3datepicker.com/
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
-
-// import 'bootstrap';
-import {Tooltip} from 'bootstrap';
+import 'bootstrap';
+import TooltipBase from '@/components/TooltipBase.vue';
 
 
 /**
@@ -83,8 +82,8 @@ let ogboard:string[][] = [
 	["  ","  ","  ","  ","  "," 3"],
 	["  ","  ","  ","  ","  ","  "],
 ];
-const move:any = ref([]);// :number[][] = [];
-const move_r:any = ref([]);// :number[][] = [];
+const move:any = ref([]);
+const move_r:any = ref([]);
 
 const difficulty = ref('');
 const date = ref();
@@ -95,7 +94,7 @@ const dateFilter = ref();
 const gameTimer = ref("00:00");
 const timerval1 = ref(0);
 let timerRunning = false;
-let interval1 = null;//setInterval(()=>{timerval1.value++}, 1000);
+let interval1 = null;
 
 const board = ref([
 	["  ","  ","  ","  ","  ","  "],
@@ -124,13 +123,6 @@ const difficulties = ref(['small', 'medium', 'large', 'mixed']);
 $(document).on('show.bs.modal', '.modal', async (event) =>{
 	await sleep(1)
 	$('.modal-backdrop').attr(`data-${scopeId}`,"")
-})
-$(document).on('show.bs.tooltip', '[data-bs-title]', async (event) =>{
-	await sleep(1)
-	$('.bs-tooltip-auto').attr('data-'+scopeId,"");
-	$('.bs-tooltip-auto').attr('data-bs-theme',isDark?"dark":"light");
-	$('.tooltip-arrow').attr('data-'+scopeId,"");
-	$('.tooltip-inner').attr('data-'+scopeId,"");
 })
 
 onMounted(()=>{
@@ -177,14 +169,8 @@ onMounted(()=>{
 	$('#btnNew').focus();
 
 	scopeId = Object.keys($("#nurikabe").data()).find(elem => elem.includes('v-'));
-	// console.log(scopeId)
 	$('.modal-backdrop').remove()
 
-	new Tooltip(document.body, {
-      selector: "[data-bs-toggle='tooltip']",
-    })
-	// $('#flag_pb').tooltip('show');
-	// $('#flag_pb').tooltip('hide');
 
 
 	findPuzzleByDate();
@@ -202,7 +188,6 @@ watch(board, (newBoard)=>{
 	$('#btnUndo').prop('disabled', false);
 	$('#btnRedo').prop('disabled', false);
 	$('#btnSave').prop('disabled', false);
-	// $('#btnLoad').prop('disabled', false);
 	$('#rangeZoom').prop('disabled', false);
 
 	clearBoard(newBoard)
@@ -214,7 +199,6 @@ watch(timerval1, (newVal)=>{
 	gameTimer.value = minute+":"+second;
 })
 watch(boardZoom, (val)=>{
-	// console.log(val);
 	// $('#gameboard').css('transform', 'scale('+val+')');
 	$('#nurikabe').css('--sqr_size', val+'px');
 
@@ -320,7 +304,6 @@ async function setSquare(x:number, y:number, state=''){
 		move.value.push([x,y]);
 		move_r.value= [];
 	}
-	// console.log(move.value);
 
 	boardClass.value[x][y]['wall'] = board.value[x][y] == ' ■'
 	setTimeout(validateBoard,1);
@@ -351,7 +334,7 @@ async function highlightEntity(x:number,y:number){
 		highlightWall([x,y])
 	}
 	if(isNumber(board.value[x][y]) || board.value[x][y] == " ●"){
-		await highlightIsland([x,y])
+		await highlightIsland([x,y]).catch((e) =>{})
 	}
 
 }
@@ -395,7 +378,7 @@ function highlightWall(square:number[]) {
 	}
 }
 async function highlightIsland(square:number[], isIgnoreIsles = false) {
-	return new Promise(async (resolve)=>{
+	return new Promise(async (resolve, reject)=>{
 		try{
 			let queue = [square.toString()];
 			const blankQueue:number[][] = [];
@@ -441,8 +424,7 @@ async function highlightIsland(square:number[], isIgnoreIsles = false) {
 				});
 
 				remainder++;
-				// if(isIgnoreIsles) break;
-				// if(remainder==0) break;
+				// await sleep(500);
 			}
 
 			$(`#item-${square[0]}_${square[1]}`).css('--count', "'"+(remainder)+"'")
@@ -460,8 +442,11 @@ async function highlightIsland(square:number[], isIgnoreIsles = false) {
 				boardClass.value[cellCoord[0]][cellCoord[1]].roothint = hintCells[0];
 			})
 
-			if(remainder <= 0){
-				resolve(remainder);
+			if(remainder < 0){
+				throw remainder;
+			}
+			if(remainder == 0){
+				resolve(0);
 				return;
 			}
 
@@ -508,12 +493,14 @@ async function highlightIsland(square:number[], isIgnoreIsles = false) {
 					queue.push([value[0]+coord[0],value[1]+coord[1], r])
 				});
 				spaceCtr++
+
+				// await sleep(500);
 			}
 			remainder-=spaceCtr;
-			resolve(remainder)
-
+			if(remainder==0) resolve(0);
+			reject(remainder);
 		}catch(ex){
-			resolve(ex);
+			reject(ex);
 		}
 	})
 }
@@ -569,66 +556,53 @@ async function validateBoard(){
 	});
 	if(boardSize !== wallCount+totalClue) return;
 
-	// console.log('validating...')
 	let result:any = false;
 
-	// console.log('checkHas1Wall')
-	result = await checkHas1Wall(root);
-	clearHighlight()
-	// console.log(result)
-	if(! result) return
+	try{
+		const boardClass_copy = [...boardClass.value];
+		await Promise.all([
+			checkHintsSatified(),
+			checkFor2By2(),
+			checkHas1Wall(root,boardClass_copy),
+		]);
+		clearHighlight();
 
-	// console.log('checkFor2By2')
-	result = await checkFor2By2()
-	// clearHighlight()
-	// console.log(result)
-	if(! result) return
+		$("#gameboard").addClass('won');
+		$('#btnUndo').prop('disabled', true);
+		$('#btnRedo').prop('disabled', true);
+		$('#btnSave').prop('disabled', true);
+		$('#btnLoad').prop('disabled', true);
+		$('#rangeZoom').prop('disabled', true);
+		boardZoom.value = minZoom.value;
 
-	// clearHighlight()
-	// console.log('checkHintsSatified')
-	result = await checkHintsSatified()
-	clearHighlight()
-	// console.log(result)
-	if(! result) return
+		timerRunning = false;
+		clearInterval(interval1);
+		$("#exampleModal").modal('show')
+		// don't record if no user login
+		if(user === null) return;
+		recordWin();
+	}catch(ex){
+		clearHighlight();
+	}
 
-
-	$("#gameboard").addClass('won');
-	$('#btnUndo').prop('disabled', true);
-	$('#btnRedo').prop('disabled', true);
-	$('#btnSave').prop('disabled', true);
-	$('#btnLoad').prop('disabled', true);
-	$('#rangeZoom').prop('disabled', true);
-	boardZoom.value = minZoom.value;
-
-	timerRunning = false;
-	clearInterval(interval1);
-	// alert("You WON!");
-	$("#exampleModal").modal('show')
-	// console.log("You Won");
-
-	// don't record if no user login
-	if(user === null) return;
-	recordWin();
 }
 
-function checkHas1Wall(square:number[]){
-	return new Promise(async(resolve)=>{
+function checkHas1Wall(square:number[], boardClass_copy){
+	return new Promise(async(resolve, reject)=>{
 		const queue = [square];
 		let qString:string[] = [];
 
 		for (let i = 0; i < queue.length; i++) {
 			const value = queue[i];
-			boardClass.value[value[0]][value[1]].visited = true;
-			// boardClass.value[value[0]][value[1]].wall_highlighted = true;
+			boardClass_copy[value[0]][value[1]].visited = true;
 			let neighboringSquare = [];
-
 
 			Object.values(directions).forEach((coord) => {
 				const newCoord = [value[0]+coord[0],value[1]+coord[1]];
 				if(qString.includes(newCoord.toString())) return;
 
-				if(boardClass.value[value[0]+coord[0]] == undefined) return;
-				neighboringSquare = boardClass.value[value[0]+coord[0]][value[1]+coord[1]];
+				if(boardClass_copy[value[0]+coord[0]] == undefined) return;
+				neighboringSquare = boardClass_copy[value[0]+coord[0]][value[1]+coord[1]];
 				if(neighboringSquare== undefined) return;
 				if(neighboringSquare.visited) return
 				if(!neighboringSquare.wall) return;
@@ -637,41 +611,51 @@ function checkHas1Wall(square:number[]){
 				qString.push(newCoord.toString());
 			});
 		}
-		resolve((queue.length === boardSize-totalClue))
+		if(queue.length === boardSize-totalClue){
+			resolve(true);
+		}else{
+			reject(false);
+		}
 	})
 }
 function checkFor2By2(){
-	return new Promise((resolve)=>{
-		for (let i = 0; i < board.value.length - 1; i++) {
-			for (let j = 0; j < board.value[i].length - 1; j++) {
-				const cell1 = board.value[i][j];
-				const cell2 = board.value[i][j + 1];
-				const cell3 = board.value[i + 1][j];
-				const cell4 = board.value[i + 1][j + 1];
+	return new Promise((resolve, reject)=>{
+		try{
 
-				if ([cell1, cell2, cell3, cell4].every(cell => cell==" ■")) {
-					resolve(false);
+			for (let i = 0; i < board.value.length - 1; i++) {
+				for (let j = 0; j < board.value[i].length - 1; j++) {
+					const cell1 = board.value[i][j];
+					const cell2 = board.value[i][j + 1];
+					const cell3 = board.value[i + 1][j];
+					const cell4 = board.value[i + 1][j + 1];
+
+					if ([cell1, cell2, cell3, cell4].every(cell => cell==" ■")) {
+						throw false;
+					}
 				}
 			}
+			resolve(true);
+		}catch(ex){
+			reject(false)
 		}
-		resolve(true);
 	})
 }
 function checkHintsSatified(){
-	return new Promise(async (resolve)=>{
+	return new Promise(async (resolve,reject)=>{
 		let ctr:number=0;
+		let promiseArr = [];
 		for (let index = 0; index < hints.length; index++) {
 			const element = hints[index];
-			ctr = await highlightIsland(element, true)
-
-			if(ctr==0) continue;
-
-			resolve(false);
-			return;
+			// console.log('a ',element)
+			promiseArr.push(highlightIsland(element, true))
 		}
-		resolve(ctr==0)
+
+		Promise.all(promiseArr)
+			.then((v)=>{ resolve(true) })
+			.catch((v)=>{ reject(false) });
 	})
 }
+
 function isCorner(x:number,y:number){
 	return new Promise(async (resolve)=>{
 		try{
@@ -786,7 +770,8 @@ async function getPersonalBest(){
 			}
 		)
 		if(v.data.code > 0 || v.data.data === null || v.data.data.length===0){
-			throw "No Personal Best";
+			// throw "No Personal Best";
+			return;
 		}
 		pb.value = formatGameTime(v.data.data.win_second);
 		$("#flag_pb").show();
@@ -1007,10 +992,6 @@ function pointermoveHandler(ev) {
 	// If the distance between the two pointers has increased (zoom in),
 	// the target element's background is changed to "pink" and if the
 	// distance is decreasing (zoom out), the color is changed to "lightblue".
-	//
-	// This function sets the target element's border to "dashed" to visually
-	// indicate the pointer's target received a move event.
-	//   ev.target.style.border = "dashed";
 
 	// Find this event in the cache and update its record with this event
 	const index = evCache.findIndex(
@@ -1069,8 +1050,6 @@ function pointerupHandler(ev) {
 	);
 	evCache.splice(index, 1);
 
-	//   ev.target.style.background = "white";
-	//   ev.target.style.border = "1px solid black";
 
 	// If the number of pointers down is less than two then reset diff tracker
 	if (evCache.length < 2) {
@@ -1078,7 +1057,6 @@ function pointerupHandler(ev) {
 	}
 	if (evCache.length < 1) {
 		prevCoord = [100000,100000, true];
-		// console.log('boo', ev.type)
 	}
 }
 
@@ -1107,7 +1085,6 @@ function pointerupHandler(ev) {
 		@wheel.keyup.ctrl.stop.prevent="scrollZoom($event)"
 		@keyup.shift.alt.r.exact="randomFetch"
 	>
-		<!-- style="max-width: calc(100vw + 300px);" -->
 		<div id='nurikabe' class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4"
 			@click.exact='resetHighlighting()'
 			ref="loadingContainer"
@@ -1126,9 +1103,9 @@ function pointerupHandler(ev) {
 				<div style="margin-bottom: .25em;">
 					<div style='width: 20em; display:flex; margin:auto; align-items: center; justify-content: space-around;'>
 						<div style='font-family: monospace; font-size: 1.5em; opacity: .6;'>{{gameTimer}}</div>
-						<div id="flag_pb" data-bs-toggle="tooltip" :data-bs-theme="isDark?'dark':'light'" :data-bs-title=pb>
-							PB
-						</div>
+						<TooltipBase :tooltip=pb as-child>
+							<div id="flag_pb">PB</div>
+						</TooltipBase>
 						<div>
 							<input type='button' id="btnUndo" class="btn btn-primary" value="<<" title='Undo' @click="undo()" disabled>
 							<input type='button' id="btnRedo" class="btn btn-primary" value=">>" title='Redo' @click="redo()" disabled>
@@ -1153,36 +1130,6 @@ function pointerupHandler(ev) {
 						</tr>
 					</table>
 				</div>
-				<!-- <div style="display: inline-block; width: 150px; vertical-align: top; padding:.5em;">
-					<table id="tbl_moves">
-						<thead>
-							<tr>
-								<th>Move</th>
-								<th style='padding:.25em .75em;'>X</th>
-								<th style='padding:.25em .75em;'>Y</th>
-							</tr>
-						</thead>
-						<tbody style="max-height:300px;">
-							<tr v-for='(_,x) in move' :key='x' class=''>
-								<td>{{move.length -1 - x}}</td>
-								<td>{{move[move.length -1 - x][0]}}</td>
-								<td>{{move[move.length -1 - x][1]}}</td>
-							</tr>
-						</tbody>
-					</table>
-				</div> -->
-				<!-- <div style="display: inline-block; width: 150px; vertical-align: top; padding:.5em;">
-					<table id="tbl_moves">
-						<tbody style="max-height:300px;">
-							<tr v-for='(_,x) in boardClass.length' :key='x' class=''>
-								<td v-for='(_, y) in boardClass[x].length' :key='y' class='square'
-								>
-									{{ boardClass[x][y].roothint }}
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div> -->
 			</div>
 			<!-- Modal -->
 			<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
@@ -1238,7 +1185,7 @@ function pointerupHandler(ev) {
 			<div class="modal fade" id="newBoardModal" tabindex="-1" aria-labelledby="newBoardModal" aria-hidden="true"
 				:data-bs-theme="isDark?'dark':'light'"
 			>
-				<div class="modal-dialog">
+				<form class="modal-dialog" @submit.prevent="gotoNewPage()" @keyup.enter.exact="gotoNewPage()" >
 					<div class="modal-content">
 					<div class="modal-header">
 						<h5 class="modal-title" id="newBoardModalLabel">New Board</h5>
@@ -1261,9 +1208,10 @@ function pointerupHandler(ev) {
 									<div class="flex">
 										<div class="wrap_option ml-auto mr-auto">
 											<label v-for="(difficulty) in difficulties">
-												<input type="radio" name="" :value="difficulty" v-model="newDifficulty">
+												<input type="radio" name="difficulty" :value="difficulty" v-model="newDifficulty"
+
+												>
 												{{ ucfirst(difficulty) }}
-												  <!-- adsfadsf -->
 											</label>
 										</div>
 									</div>
@@ -1283,13 +1231,12 @@ function pointerupHandler(ev) {
 						</table>
 					</div>
 					<div class="modal-footer">
-						<button type='button' class='btn btn-primary' @click='gotoNewPage()' >Submit</button>
-						<input type='button' value='Random' class='btn btn-primary' @click='randomFetch()' />
+						<button type='button' class='btn btn-primary' @click="gotoNewPage()">Submit</button>
+						<input  type='button' value='Random' class='btn btn-primary' @click='randomFetch()' />
 						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-						<!-- <button type="button" class="btn btn-primary">Save changes</button> -->
 					</div>
 					</div>
-				</div>
+				</form>
 			</div><!-- end Modal-->
 		</div>
 	</AppLayout>

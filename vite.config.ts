@@ -31,7 +31,8 @@ export default defineConfig({
             'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
         },
     },
-    // server:{
-    //     host:true,
-    // }
+    server:{
+        // host:true,
+        cors: "http://192.168.1.75:5173"
+    }
 });
