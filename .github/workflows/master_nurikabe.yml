@@ -6,7 +6,7 @@ name: Build and deploy PHP app to Azure Web App - nurikabe
 on:
   push:
     branches:
-      - main
+      - master
   # workflow_dispatch:
 
 jobs:
