@@ -15,6 +15,9 @@ details ul,
 }
 .square {
     --count: '0';
+    --hover-color: rgba(0, 114, 0, 0.917);
+    --root-hightlight: chartreuse;
+
     font-size: var(--sqr_size);
     border: 1px solid;
     height: 1.7em;
@@ -24,6 +27,13 @@ details ul,
     user-select: none;
     cursor: pointer;
     position: relative;
+    color:black;
+
+    @media (prefers-color-scheme: dark) {
+       color: white;
+       --hover-color: chartreuse;
+       --root-hightlight: rgba(0, 114, 0, 0.917);
+    }
 
     &.root_highlight::after {
         content: var(--count);
@@ -32,22 +42,27 @@ details ul,
         font-size: 0.6em;
         top: -0.6em;
         right: -0.6em;
-        background-color: chartreuse;
+        background-color: var(--root-hightlight);
         border-radius: 1em;
-        z-index: 1;
+        z-index: 2;
         aspect-ratio: 1;
         height: 1.5em;
         border: 2px solid green;
         display: flex;
         justify-content: center;
         align-items: center;
-        // color:black;
-        @media (prefers-color-scheme: dark) {
-            background-color: rgba(0, 114, 0, 0.917);
-        }
     }
-    &:hover {
-        box-shadow: 0 0 0px 2px green;
+    &:hover::before {
+        @media screen and (min-width: 640px) {
+            content:"";
+            box-shadow: 0 0 0px 2px var(--hover-color);
+            z-index: 1;
+            position: absolute;
+            top: 0;
+            right:0;
+            bottom:0;
+            left:0;
+        }
     }
     &.wall {
         background-color: black;
@@ -68,9 +83,6 @@ details ul,
     &.wall_highlighted-bottom {
         border-bottom: 2px solid deepskyblue;
     }
-    &.wall_highlighted {
-        border: 2px solid deepskyblue;
-    }
     &.island_highlighted {
         background-color: rgba(108, 236, 108, 0.917);
 
@@ -80,21 +92,26 @@ details ul,
     }
 }
 table#gameboard {
-    border: 5px solid gray;
+    border: 1px solid black;
+    // border: 10px solid gray;
     margin: 0.5em auto;
     position: relative;
     table-layout: fixed;
-    width: calc(var(--sqr_size) * var(--col_count));
+    width: calc(var(--sqr_size) * var(--col_count) *1.7);
+    height: calc(var(--sqr_size) * var(--col_count) *1.7);
     background-color: rgb(237, 241, 251);
+    // border-collapse: separate;
+    // border-spacing: 0px;
+    box-shadow: 0 0 0 5px gray;
 
     @media (prefers-color-scheme: dark) {
+        border: 1px solid white;
         background-color: rgb(32, 35, 43);
     }
+    &.zoomed {
+        margin: 0.5em 50px;
+    }
 }
-table#gameboard.zoomed {
-    margin: 0.5em 50px;
-}
-
 #det_api,
 #det_help {
     border: 3px solid rgb(63, 146, 242);
@@ -132,9 +149,10 @@ table#gameboard.zoomed {
     // width: calc(100% - 150px);
     min-height: calc(100vh - 210px);
     touch-action: none; /* Prevent default touch behavior */
+    padding-top:10px;
+    padding-right:10px;
     padding-bottom: 10em;
-    // padding-left:10em;
-    // padding-right:10em;
+    padding-left:10px;
     // margin-left: -5em;
 
     // display: flex;
@@ -207,7 +225,7 @@ table#gameboard.zoomed {
     margin-top: -1em;
     background-color: white;
     padding-bottom: 0.5em;
-    z-index: 1;
+    z-index: 3;
     border-bottom: 1px solid black;
 
     @media (prefers-color-scheme: dark) {
@@ -222,3 +240,29 @@ table#gameboard.zoomed {
     padding: 0.25em;
     cursor: help;
 }
+#btnLoad.breathe{
+    animation: breathe .5s ease-in-out 2;
+}
+
+@keyframes breathe {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+#continueLoader .loaderText{
+    --continue-overlay:rgba(255,255,255,0.5);
+    @media (prefers-color-scheme: dark) {
+        --continue-overlay: rgba(0,0,0,0.5);
+    }
+    box-shadow: 0 0 4px 5px var(--continue-overlay);
+    font-size: 1.5em;
+    background-color: var(--continue-overlay)
+
+}
+

@@ -9,7 +9,7 @@ import { useDark, useToggle } from '@vueuse/core'
 
 import "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"
 
-import {useLoading} from 'vue-loading-overlay'
+import Loading, {useLoading} from 'vue-loading-overlay'
 import 'vue-loading-overlay/dist/css/index.css';
 
 //VueDatePicker: https://vue3datepicker.com/
@@ -34,6 +34,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 	},
 ];
 const $loading = useLoading({});
+const overlayContinue = ref(false);
+
 let scopeId:string = "";
 let zoomed = false;
 
@@ -120,10 +122,14 @@ const minDate = new Date("2005/01/01").getTime();
 const maxDate = Date.now();
 const difficulties = ref(['small', 'medium', 'large', 'mixed']);
 
+const pb = ref('');
+
 $(document).on('show.bs.modal', '.modal', async (event) =>{
 	await sleep(1)
 	$('.modal-backdrop').attr(`data-${scopeId}`,"")
 })
+window.onfocus = focusPage;
+window.onblur = unfocusPage;
 
 onMounted(()=>{
 	difficulty.value = 'small';
@@ -166,14 +172,26 @@ onMounted(()=>{
 
 	$('main').css('overflow', 'auto')
 	$('main').css('height', 'calc(100vh - 1em)')
-	$('#btnNew').focus();
+	$('#btnRedo').focus();
 
 	scopeId = Object.keys($("#nurikabe").data()).find(elem => elem.includes('v-'));
 	$('.modal-backdrop').remove()
 
 
+	let slashDate = date.value.getFullYear()+"/"+
+		(date.value.getMonth()+1)+"/"+
+		date.value.getDate();
+	dateFilter.value = slashDate;
+	newDifficulty.value = difficulty.value;
 
-	findPuzzleByDate();
+
+	if(localStorage.getItem('board_det') == difficulty.value+"/"+dateFilter.value
+		&& localStorage.getItem('board_continue') != null
+	){
+		continueBoard();
+	}else{
+		findPuzzleByDate(slashDate);
+	}
 	getPersonalBest();
 })
 onUnmounted(()=>{
@@ -220,10 +238,133 @@ watch(boardZoom, (val)=>{
 
 clearBoard(board.value)
 
-function saveBoard(){
+async function findPuzzleByDate(slashDate){
+	const loader = $loading.show();
+	try {
+		const v = await axios.post(
+			"/fetchapi",
+			{
+				difficulty: difficulty.value,
+				date: slashDate,
+			}
+		)
+
+		if(v.data == ""){
+			throw "No record found";
+		}
+
+		move.value = [];
+
+		const data = v.data.puzzleData;
+		// const h = data.gridHeight;
+		const w = data.gridWidth;
+		const g = data.data.startingGrid;
+
+		ogboard =[[]]
+
+		// update scale
+		// const sqrSize = $('#nurikabe').css('--sqr_size').slice(0,-2);;
+		let boardWidth = $('#wrap_board').css('width'); // get board width
+		boardWidth = boardWidth.slice(0,-2); // remove the unit PX
+
+		let zoom = ((boardWidth - 16)/w)/1.8;
+		zoom = Math.min(zoom, 30);
+		zoom = parseFloat(zoom.toFixed(1))
+		minZoom.value = zoom;
+		$('#nurikabe').css('--col_count', w);
+
+		Object.entries(g).forEach(([k,v]) => {
+			const x = parseInt(k/w);
+			const y = k%w;
+			if(ogboard[x] == undefined) ogboard[x] = [];
+
+			if(v == 0){
+				ogboard[x][y]= "  ";
+			}else{
+				ogboard[x][y]= " "+v;
+			}
+		});
+		board.value = ogboard;
+		boardZoom.value = minZoom.value;
+
+		localStorage.setItem('board_det', difficulty.value+"/"+dateFilter.value);
+		localStorage.setItem('board_data', JSON.stringify({
+			startingGrid: g,
+			gridWidth: data.gridWidth,
+			gridHeight: data.gridHeight,
+		}));
+
+		timerval1.value=0;
+		timerRunning = false;
+		clearInterval(interval1);
+	} catch (err) {
+		console.log(err);
+		alert(`API Error: Fetching board failed. `);
+	} finally {
+		// $('#newBoardModal').modal('hide');
+		loader.hide();
+	}
+}
+function continueBoard(){
+	overlayContinue.value = true;
+
+	board.value = JSON.parse(localStorage.getItem('board_continue')??"[[ ]]");
+	move.value = JSON.parse(localStorage.getItem('move_continue')??"[[ ]]");
+	const timer = JSON.parse(localStorage.getItem('timer_continue')??"[[ ]]");
+	const board_data = JSON.parse(localStorage.getItem('board_data')??"[[ ]]");
+
+	try {
+
+		// const h = data.gridHeight;
+		const w = board_data.gridWidth;
+		const g = board_data.startingGrid;
+
+		ogboard =[[]]
+
+		// update scale
+		// const sqrSize = $('#nurikabe').css('--sqr_size').slice(0,-2);;
+		let boardWidth = $('#wrap_board').css('width'); // get board width
+		boardWidth = boardWidth.slice(0,-2); // remove the unit PX
+
+		let zoom = ((boardWidth - 16)/w)/1.8;
+		zoom = Math.min(zoom, 30);
+		zoom = parseFloat(zoom.toFixed(1))
+		minZoom.value = zoom;
+		$('#nurikabe').css('--col_count', w);
+
+		Object.entries(g).forEach(([k,v]) => {
+			const x = parseInt(k/w);
+			const y = k%w;
+			if(ogboard[x] == undefined) ogboard[x] = [];
+
+			if(v == 0){
+				ogboard[x][y]= "  ";
+			}else{
+				ogboard[x][y]= " "+v;
+			}
+		});
+		boardZoom.value = minZoom.value;
+
+		timerval1.value=timer;
+		timerRunning = false;
+		clearInterval(interval1);
+		// interval1 = setInterval(()=>{timerval1.value++}, 1000);
+
+	} catch (err) {
+		console.log(err);
+		alert(`API Error: Fetching board failed. `);
+	} finally {
+		// $('#newBoardModal').modal('hide');
+		// loader.hide();
+	}
+}
+async function saveBoard(){
     localStorage.setItem('board', JSON.stringify(board.value??[[' ']]));
     localStorage.setItem('move', JSON.stringify(move.value??[[' ']]));
-	$("#btnLoad").prop('disabled', false)
+	$("#btnLoad").prop('disabled', false);
+	$('#btnLoad').addClass('breathe');
+	await sleep(1000);
+	$('#btnLoad').removeClass('breathe');
 }
 function loadBoard(){
 	board.value = JSON.parse(localStorage.getItem('board')??"[[ ]]");
@@ -541,6 +682,7 @@ function reset(){
 	timerval1.value=0;
 	timerRunning = false;
 	clearInterval(interval1);
+	localSaveReset();
 }
 
 async function validateBoard(){
@@ -578,6 +720,8 @@ async function validateBoard(){
 		timerRunning = false;
 		clearInterval(interval1);
 		$("#exampleModal").modal('show')
+
+		localSaveReset();
 		// don't record if no user login
 		if(user === null) return;
 		recordWin();
@@ -686,75 +830,13 @@ function gotoNewPage(){
 	$('.modal').modal('hide')
 	newPageLoader.value = $loading.show()
 	router.visit(newUrl)
+    localStorage.removeItem('board_det');
+    localStorage.removeItem('board_data');
+    localStorage.removeItem('board_continue');
+    localStorage.removeItem('move_continue');
+    localStorage.removeItem('timer_continue');
 }
 
-async function findPuzzleByDate(){
-	let slashDate = date.value.getFullYear()+"/"+
-		(date.value.getMonth()+1)+"/"+
-		date.value.getDate();
-	dateFilter.value = slashDate;
-	newDifficulty.value = difficulty.value;
-
-	const loader = $loading.show();
-	try {
-		const v = await axios.post(
-			"/fetchapi",
-			{
-				difficulty: difficulty.value,
-				date: slashDate,
-			}
-		)
-
-		if(v.data == ""){
-			throw "No record found";
-		}
-
-		move.value = [];
-
-		const data = v.data.puzzleData;
-		// const h = data.gridHeight;
-		const w = data.gridWidth;
-		const g = data.data.startingGrid;
-
-		ogboard =[[]]
-
-		// update scale
-		// const sqrSize = $('#nurikabe').css('--sqr_size').slice(0,-2);;
-		let boardWidth = $('#wrap_board').css('width'); // get board width
-		boardWidth = boardWidth.slice(0,-2); // remove the unit PX
-
-		let zoom = ((boardWidth - 16)/w)/1.8;
-		zoom = Math.min(zoom, 30);
-		zoom = parseFloat(zoom.toFixed(1))
-		minZoom.value = zoom;
-		$('#nurikabe').css('--col_count', w);
-
-		Object.entries(g).forEach(([k,v]) => {
-			const x = parseInt(k/w);
-			const y = k%w;
-			if(ogboard[x] == undefined) ogboard[x] = [];
-
-			if(v == 0){
-				ogboard[x][y]= "  ";
-			}else{
-				ogboard[x][y]= " "+v;
-			}
-		});
-		board.value = ogboard;
-		boardZoom.value = minZoom.value;
-
-		timerval1.value=0;
-		timerRunning = false;
-		clearInterval(interval1);
-	} catch (err) {
-		console.log(err);
-		alert(`API Error: Fetching board failed. `);
-	} finally {
-		// $('#newBoardModal').modal('hide');
-		loader.hide();
-	}
-}
-const pb = ref('');
 async function getPersonalBest(){
 	try {
 		$("#flag_pb").hide();
@@ -872,9 +954,8 @@ function randomFetch(){
 		maxYr = new Date().getFullYear();
 		year = Math.floor(Math.random() * (maxYr-minYr+1))+minYr;
 		month = (Math.floor(Math.random() * 12)+1).toString().padStart(2, '0');
-		day = (Math.floor(Math.random() * 2)+30).toString().padStart(2, '0');
+		day = (Math.floor(Math.random() * 31)+1).toString().padStart(2, '0');
 		the_date = new Date(`${year}/${month}/${day}`);
-
 	}while(the_date.getTime() > Date.now())
 
 	newDifficulty.value = difficulties.value[the_difficulty]
@@ -917,13 +998,18 @@ function focusPage(){
 		interval1 = setInterval(()=>{timerval1.value++}, 1000);
 	}
 }
-function unfocusPage(event){
+function unfocusPage(){
 	// Code to execute when the tab loses focus
-	// console.log('Tab is now blurred');
 	const tagName = document.activeElement.tagName
+	// console.log('Tab is now blurred', tagName);
+
 	if(tagName === "BODY" ) return; // dont stop clock if focused element is part of the newPageLoader
 	clearInterval(interval1);
 	interval1 = null
+
+	localStorage.setItem('board_continue', JSON.stringify(board.value??[[' ']]));
+	localStorage.setItem('move_continue', JSON.stringify(move.value??[[' ']]));
+	localStorage.setItem('timer_continue', (timerval1.value||0).toString());
 }
 function scrollZoom(ev){
 	if($("#gameboard").hasClass('won')) return;
@@ -948,6 +1034,20 @@ function formatGameTime(time){
 	let second =  String(time%60).padStart(2,'0');
 	let minute =  String(parseInt(time/60)).padStart(2,'0');
 	return minute+":"+second;
+}
+function localSaveReset(){
+	localStorage.removeItem('board_det');
+	localStorage.removeItem('board_data');
+	localStorage.removeItem('board_continue');
+	localStorage.removeItem('move_continue');
+	localStorage.removeItem('timer_continue');
+}
+async function handleContinueLoader(){
+	timerRunning = true;
+	// interval1 = setInterval(()=>{timerval1.value++}, 1000);
+	$('body').focus();
+	await sleep(1);
+	$('#btnRedo').focus();
 }
 
 // ++++++UTIL
@@ -1078,8 +1178,8 @@ function pointerupHandler(ev) {
 	<Head title="Board" />
 
 	<AppLayout :breadcrumbs="breadcrumbs"
-		tabindex='0'
-		@blur='unfocusPage' @focus='focusPage()'
+	tabindex='0'
+		@blur='unfocusPage()' @focus='focusPage()'
 		@keyup.ctrl.z.exact='undo()'
 		@keyup.ctrl.shift.z.exact='redo()' @keyup.ctrl.y.exact='redo()'
 		@wheel.keyup.ctrl.stop.prevent="scrollZoom($event)"
@@ -1089,6 +1189,11 @@ function pointerupHandler(ev) {
 			@click.exact='resetHighlighting()'
 			ref="loadingContainer"
 		>
+			<loading id="continueLoader" v-model:active="overlayContinue" :can-cancel="true"
+				:on-cancel="handleContinueLoader"
+			>
+				<div class="loaderText">Click to continue</div>
+			</loading>
 			<div class="d-flex justify-between items-baseline">
 				<h4>{{ ucfirst(difficulty) }}: {{ dateFilter }} </h4>
 				<button type="button" class="btn btn-outline-primary" @click="showHelp" style="font-size:1.5em">&#9432;</button>
