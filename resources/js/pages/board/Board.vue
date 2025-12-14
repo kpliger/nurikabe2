@@ -1044,7 +1044,6 @@ function localSaveReset(){
 }
 async function handleContinueLoader(){
 	timerRunning = true;
-	// interval1 = setInterval(()=>{timerval1.value++}, 1000);
 	$('body').focus();
 	await sleep(1);
 	$('#btnRedo').focus();
