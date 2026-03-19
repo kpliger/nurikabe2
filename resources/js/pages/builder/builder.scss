@@ -29,7 +29,7 @@ details ul,
 	position: relative;
 	color:black;
 
-	@media (prefers-color-scheme: dark) {
+	html.dark & {
 	   color: white;
 	   --hover-color: chartreuse;
 	   --root-hightlight: rgba(0, 114, 0, 0.917);
@@ -54,7 +54,7 @@ table#gameboard {
 	// border-spacing: 0px;
 	box-shadow: 0 0 0 5px gray;
 
-	@media (prefers-color-scheme: dark) {
+	html.dark & {
 		border: 1px solid white;
 		background-color: rgb(32, 35, 43);
 	}
@@ -94,13 +94,7 @@ table#gameboard {
 //     opacity: 0.5;
 //     pointer-events: none;
 // }
-@media (prefers-color-scheme: dark) {
-	/* CSS rules for dark mode */
-	#api_difficulty {
-		color: white;
-		background-color: black;
-	}
-}
+
 #tbl_moves {
 	border: 3px solid;
 	th {
@@ -134,7 +128,7 @@ table#gameboard {
 	z-index: 3;
 	border-bottom: 1px solid black;
 
-	@media (prefers-color-scheme: dark) {
+	html.dark & {
 		border-bottom: 1px solid white;
 		background-color: black;
 	}
@@ -156,7 +150,7 @@ table#gameboard {
 }
 #continueLoader .loaderText{
 	--continue-overlay:rgba(255,255,255,0.5);
-	@media (prefers-color-scheme: dark) {
+	html.dark & {
 		--continue-overlay: rgba(0,0,0,0.5);
 	}
 	box-shadow: 0 0 4px 5px var(--continue-overlay);
@@ -178,14 +172,22 @@ table#gameboard {
 
 #pastingArea,
 #fileInput {
-		width:100%;
-		margin-top:1em;
-		margin-bottom:1em;
-		border: 1px solid white;
-		border-radius: .5em;
-		padding:.5em;
+	--border-color: black;
+	--focus-color: rgba(29, 29, 99, 0.7);
 
-		&:focus{
-				box-shadow: 0px 0px 0px .5em rgba($color: blue, $alpha: .7);
-		}
+	html.dark & {
+		--border-color: white;
+		--focus-color: rgba(97, 113, 254, 0.917);
+	}
+
+	width:100%;
+	margin-top: .5em;
+	margin-bottom: .5em;
+	border: 1px solid var(--border-color);
+	border-radius: .5em;
+	padding:.5em;
+
+	&:focus{
+			box-shadow: 0px 0px .2em .2em var(--focus-color);
+	}
 }

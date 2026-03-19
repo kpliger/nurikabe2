@@ -7,10 +7,10 @@ import { SharedData, type BreadcrumbItem, type User } from '@/types';
 import { Head, Link, router, useForm, usePage, } from '@inertiajs/vue3';
 import {onMounted, ref, watch, toRaw, useTemplateRef, useId, onUnmounted, onBeforeUnmount} from 'vue';
 
+import "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+
 import Loading, {useLoading} from 'vue-loading-overlay'
 import 'vue-loading-overlay/dist/css/index.css';
-
-import "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"
 
 // https://kamranahmed.info/toast
 import "https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.js"
@@ -32,7 +32,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 	},
 ];
 
-const isDark = useDark()
+const isDark = ref(true);
 const $loading = useLoading({});
 
 let scopeId:string = "";
@@ -60,7 +60,7 @@ const board = ref([
 
 const boardZoom = ref(30);
 const maxZoom = ref(40);
-const minZoom = ref(6);
+const minZoom = ref(30);
 const newPageLoader = ref();
 
 const rowInt = ref(5);
@@ -88,6 +88,7 @@ onMounted( async()=>{
 		cvReady.value = false;
 	}
 
+	observeDarkMode();
 
 	let imgElement = document.getElementById('imageSrc');
 	let inputElement = document.getElementById('fileInput');
@@ -128,6 +129,7 @@ onMounted( async()=>{
 	rowInt.value = board.value.length;
 	colInt.value = board.value[0].length;
 
+	updateDimension(colInt.value, rowInt.value);
 })
 onUnmounted(()=>{
 	if(newPageLoader.value === undefined) return
@@ -140,7 +142,7 @@ watch(boardZoom, (val)=>{
 	$('#nurikabe').css('--sqr_size', val+'px');
 
 	const boardWrap:number = parseFloat($('#wrap_board').css('width').slice(0,-2));
-	const gameboard:number = parseFloat($('#gameboard').css('width').slice(0,-2));
+	const gameboard = colInt.value*val+1.7;
 
 	if(gameboard<=boardWrap){
 		$('#gameboard').removeClass('zoomed')
@@ -154,15 +156,8 @@ watch(boardZoom, (val)=>{
 		}
 	}
 })
-watch(colInt, (val)=>{
-	updateDimension(val, rowInt.value);
-});
-watch(rowInt, (val)=>{
-	updateDimension(colInt.value, val);
-});
 
 function updateDimension(column:any, row:any){
-
 	let tempBoard:(string|number)[][]=[[]];
 	for (let x = 0; x < row; x++) {
 		tempBoard[x] = [];
@@ -182,21 +177,9 @@ function updateDimension(column:any, row:any){
 	let zoom = ((boardWidth - 16)/column)/1.8;
 	zoom = Math.min(zoom, 30);
 	zoom = parseFloat(zoom.toFixed(1))
-	boardZoom.value =	minZoom.value = zoom;
+	boardZoom.value = zoom;
+	minZoom.value = zoom;
 
-	// const boardWrap:number = parseFloat($('#wrap_board').css('width').slice(0,-2));
-	// const gameboard:number = parseFloat($('#gameboard').css('width').slice(0,-2));
-	// if(gameboard<=boardWrap){
-	// 	$('#gameboard').removeClass('zoomed')
-	// 	zoomed = false;
-	// }else{
-	// 	$('#gameboard').addClass('zoomed')
-
-	// 	if(!zoomed){
-	// 		zoomed = true;
-	// 		$('#wrap_board').get(0).scrollBy({left:50})
-	// 	}
-	// }
 }
 
 function goPlayCustom(){
@@ -246,28 +229,6 @@ function moveCell(direction: string) {
 	const nextInput = document.getElementById(`item-${newX}_${newY}`)?.querySelector('input') as HTMLInputElement;
 	nextInput.focus();
 	nextInput.select();
-}
-
-
-async function getOpenCv() {
-  let cv;
-  if (cvModule instanceof Promise) {
-    cv = await cvModule;
-  } else {
-    if (cvModule.Mat) {
-      // already initialized
-      cv = cvModule;
-    } else {
-      await new Promise((resolve) => {
-        cvModule.onRuntimeInitialized = () => {
-					resolve();
-				}
-      });
-      cv = cvModule;
-    }
-  }
-	// console.log("OpenCV.js is ready.");
-  return  {cv} ;
 }
 
 function recognizeImageToText(cell:any) {
@@ -429,7 +390,8 @@ const processImage = async (imgElement:any)=>{
 	applyImageData(board);
 
 	loader.hide();
-	$("#uploadModal .btn-close").click();// workaround to close modal
+	$("#uploadModal").modal('hide');
+	// $("#uploadModal .btn-close").click();// workaround to close modal
 
 	// Cleanup
 	src.delete(); gray.delete(); thresh.delete();
@@ -541,6 +503,18 @@ function applyImageData(data){
 	rowInt.value = rowLen;
 
 	board.value = data;
+}
+function observeDarkMode(){
+	isDark.value = document.documentElement.classList.contains('dark');
+	const observer = new MutationObserver((mutations) => {
+		mutations.forEach((mutation) => {
+			if (mutation.attributeName === 'class') {
+				const element = mutation.target;
+				isDark.value = element.classList.contains('dark');
+			}
+		});
+	});
+	observer.observe(document.documentElement, { attributes: true });
 }
 
 
@@ -671,15 +645,24 @@ function pointerupHandler(ev) {
 		>
 			<div id='wrap_gameactions'>
 				<div id='fullboardchange' style='margin: 1em auto; text-align: center;'>
+
 					<label style="display: inline-flex; align-items: center; width: 10em;">
 						Column&nbsp;
-						<Input type="number" placeholder="Column" v-model="colInt" min="5"/>
+						<Input type="number" placeholder="Column" v-model="colInt" min="5"
+							@blur="updateDimension(colInt, rowInt)"
+							@keyup.enter.prevent="updateDimension(colInt, rowInt)"
+						/>
 					</label>
 					<br>
 					<label style="display: inline-flex; align-items: center; width: 10em;">
 						Row&nbsp;
-						<Input type="number" placeholder="Row" v-model="rowInt" min="5"/>
+						<Input type="number" placeholder="Row" v-model="rowInt" min="5"
+							@blur="updateDimension(colInt, rowInt)"
+							@keyup.enter.prevent="updateDimension(colInt, rowInt)"
+						/>
 					</label>
+
+
 					<br><br>
 					<button type="button" class="btn btn-success"
 						@click="goPlayCustom()"
@@ -708,7 +691,7 @@ function pointerupHandler(ev) {
 						<tr v-for='(_,x) in board.length' :key='x' class=''>
 							<td v-for='(_, y) in board[x].length' :key='y' class='square'
 								:id="'item-'+x+'_'+y"
-								:title="x+','+y"
+								:title="(x+1)+','+(y+1)"
 							>
 								<Input type='number' class='cellInput'
 									min="1"
@@ -752,12 +735,10 @@ function pointerupHandler(ev) {
 
 							<div id="pastingArea" tabindex="0"
 								@paste="pasteClipboard($event, 'imageSrc', processImage)"
-								style="border: 1px solid white; border-radius: .5em; padding:.5em;"
 							>Paste image from clipboard here.</div>
 							<div>OR</div>
 							<input type="file" id="fileInput" name="file"
-								accept="image/*"
-								style="border: 1px solid white; border-radius: .5em; padding:.5em;"/>
+								accept="image/*"/>
 
 							<img id="imageSrc" alt="No Image"
 								style="border:1px solid white; max-height: 20em; margin:auto;"/>

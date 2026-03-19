@@ -31,12 +31,10 @@ details ul li::marker,
   position: relative;
   color: black;
 }
-@media (prefers-color-scheme: dark) {
-  .square {
-    color: white;
-    --hover-color: chartreuse;
-    --root-hightlight: rgba(0, 114, 0, 0.917);
-  }
+html.dark .square {
+  color: white;
+  --hover-color: chartreuse;
+  --root-hightlight: rgba(0, 114, 0, 0.917);
 }
 .square .cellInput {
   font-size: 0.8em;
@@ -55,11 +53,9 @@ table#gameboard {
   background-color: rgb(237, 241, 251);
   box-shadow: 0 0 0 5px gray;
 }
-@media (prefers-color-scheme: dark) {
-  table#gameboard {
-    border: 1px solid white;
-    background-color: rgb(32, 35, 43);
-  }
+html.dark table#gameboard {
+  border: 1px solid white;
+  background-color: rgb(32, 35, 43);
 }
 table#gameboard.zoomed {
   margin: 0.5em 50px;
@@ -86,13 +82,6 @@ table#gameboard.zoomed {
   margin: auto;
 }
 
-@media (prefers-color-scheme: dark) {
-  /* CSS rules for dark mode */
-  #api_difficulty {
-    color: white;
-    background-color: black;
-  }
-}
 #tbl_moves {
   border: 3px solid;
 }
@@ -127,11 +116,9 @@ table#gameboard.zoomed {
   z-index: 3;
   border-bottom: 1px solid black;
 }
-@media (prefers-color-scheme: dark) {
-  #wrap_gameactions {
-    border-bottom: 1px solid white;
-    background-color: black;
-  }
+html.dark #wrap_gameactions {
+  border-bottom: 1px solid white;
+  background-color: black;
 }
 
 #btnLoad.breathe {
@@ -152,10 +139,8 @@ table#gameboard.zoomed {
 #continueLoader .loaderText {
   --continue-overlay:rgba(255,255,255,0.5);
 }
-@media (prefers-color-scheme: dark) {
-  #continueLoader .loaderText {
-    --continue-overlay: rgba(0,0,0,0.5);
-  }
+html.dark #continueLoader .loaderText {
+  --continue-overlay: rgba(0,0,0,0.5);
 }
 #continueLoader .loaderText {
   box-shadow: 0 0 4px 5px var(--continue-overlay);
@@ -177,14 +162,24 @@ table#gameboard.zoomed {
 
 #pastingArea,
 #fileInput {
+  --border-color: black;
+  --focus-color: rgba(29, 29, 99, 0.7);
+}
+html.dark #pastingArea,
+html.dark #fileInput {
+  --border-color: white;
+  --focus-color: rgba(97, 113, 254, 0.917);
+}
+#pastingArea,
+#fileInput {
   width: 100%;
-  margin-top: 1em;
-  margin-bottom: 1em;
-  border: 1px solid white;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  border: 1px solid var(--border-color);
   border-radius: 0.5em;
   padding: 0.5em;
 }
 #pastingArea:focus,
 #fileInput:focus {
-  box-shadow: 0px 0px 0px 0.5em rgba(0, 0, 255, 0.7);
+  box-shadow: 0px 0px 0.2em 0.2em var(--focus-color);
 }/*# sourceMappingURL=builder.css.map */
