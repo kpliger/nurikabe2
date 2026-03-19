@@ -71,16 +71,22 @@ $(document).on('show.bs.modal', '.modal', async (event) =>{
 	$('.modal-backdrop').attr(`data-${scopeId}`,"")
 })
 
+let cvReady = ref(true);
+
+
 onMounted( async()=>{
 
-	const script = document.createElement('script');
-	script.type = 'text/javascript';
-	script.src = 'https://docs.opencv.org/4.13.0/opencv.js';
-	// script.onload = () => {
-	// 	// cv = window.cv;
-	// 	console.log("OpenCV.js loaded.");
-	// }
-	document.body.appendChild(script);
+	if(window.cv==null){
+		const script = document.createElement('script');
+		script.type = 'text/javascript';
+		script.src = 'https://docs.opencv.org/4.13.0/opencv.js';
+		script.onload = () => {
+			cvReady.value = false;
+		}
+		document.body.appendChild(script);
+	}else{
+		cvReady.value = false;
+	}
 
 
 	let imgElement = document.getElementById('imageSrc');
@@ -685,6 +691,7 @@ function pointerupHandler(ev) {
 					</div>
 					<button type="button" class="btn btn-primary"
 						data-bs-toggle="modal" data-bs-target="#uploadModal"
+						:disabled="cvReady"
 					>Upload</button>
 				</div>
 				<div style="margin-bottom: .25em;">
