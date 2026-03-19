@@ -63,7 +63,6 @@ const maxZoom = ref(40);
 const minZoom = ref(6);
 const newPageLoader = ref();
 
-
 const rowInt = ref(5);
 const colInt = ref(5);
 
@@ -423,8 +422,8 @@ const processImage = async (imgElement:any)=>{
 
 	applyImageData(board);
 
-	$("#uploadModal").modal('hide');
 	loader.hide();
+	$("#uploadModal").modal('hide');
 
 	// Cleanup
 	src.delete(); gray.delete(); thresh.delete();
