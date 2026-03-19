@@ -21,18 +21,8 @@ import 'bootstrap';
 import Input from '@/components/ui/input/Input.vue';
 import { useDark } from '@vueuse/core';
 
-// import cvModule from "@techstark/opencv-js";
-// import "https://docs.opencv.org/4.13.0/opencv.js"
 import "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
 import { pasteClipboard } from './pasteclipboard';
-
-
-// const script = document.createElement('script');
-// script.type = 'module';
-// script.src = 'https://docs.opencv.org/4.13.0/opencv.js';
-// script.crossOrigin = 'anonymous'; // JS property, not HTML attribute
-// document.head.appendChild(script);
-// import {cv} from "./opencv" ;
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -77,19 +67,22 @@ const newPageLoader = ref();
 const rowInt = ref(5);
 const colInt = ref(5);
 
-// let cv:any=null;
-
 $(document).on('show.bs.modal', '.modal', async (event) =>{
 	await sleep(1)
 	$('.modal-backdrop').attr(`data-${scopeId}`,"")
 })
 
-const cvReady = ref(false)
-
 onMounted( async()=>{
-	// ({cv}  = await getOpenCv());
-	// await import("https://docs.opencv.org/4.13.0/opencv.js");
-	// await import("./opencvLoader.js");
+
+	const script = document.createElement('script');
+	script.type = 'text/javascript';
+	script.src = 'https://docs.opencv.org/4.13.0/opencv.js';
+	// script.onload = () => {
+	// 	// cv = window.cv;
+	// 	console.log("OpenCV.js loaded.");
+	// }
+	document.body.appendChild(script);
+
 
 	let imgElement = document.getElementById('imageSrc');
 	let inputElement = document.getElementById('fileInput');
@@ -688,12 +681,12 @@ function pointerupHandler(ev) {
 					>Play</button>
 					&nbsp;&nbsp;&nbsp;&nbsp;
 					<button type="button" class="btn btn-warning" @click="clearBoard">Clear</button>
-					<!-- <div style="display:inline-block;width:3em">
-						< !-- spacer -- >
-					</div> -->
-					<!-- <button type="button" class="btn btn-primary"
+					<div style="display:inline-block;width:3em">
+						<!-- spacer -->
+					</div>
+					<button type="button" class="btn btn-primary"
 						data-bs-toggle="modal" data-bs-target="#uploadModal"
-					>Upload</button> -->
+					>Upload</button>
 				</div>
 				<div style="margin-bottom: .25em;">
 					<div style='width: 20em; display:flex; margin:auto; align-items: center; justify-content: space-around;'>

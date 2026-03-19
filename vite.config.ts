@@ -33,6 +33,6 @@ export default defineConfig({
     },
     server:{
         // host:true,
-        cors: "http://192.168.1.75:5173"
+        cors: "http://192.168.1.72:5173"
     }
 });
