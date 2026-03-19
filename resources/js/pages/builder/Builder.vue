@@ -429,7 +429,7 @@ const processImage = async (imgElement:any)=>{
 	applyImageData(board);
 
 	loader.hide();
-	$(".modal").modal('hide');
+	$("#uploadModal .btn-close").click();// workaround to close modal
 
 	// Cleanup
 	src.delete(); gray.delete(); thresh.delete();
