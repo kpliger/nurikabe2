@@ -1,0 +1,1 @@
+export * from "https://docs.opencv.org/4.13.0/opencv.js";
