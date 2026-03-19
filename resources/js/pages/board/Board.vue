@@ -1,13 +1,25 @@
 <script setup lang="ts">
+
+/**
+ * TODO:
+ * 	- leave page prompt when history back/forward(popstate) event
+ * 		- router.on(before) dont work
+ * 		- handleBeforeUnload works but half of the story
+ *
+ */
+
+
 import axios from 'axios';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { SharedData, type BreadcrumbItem, type User } from '@/types';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage, } from '@inertiajs/vue3';
 import PlaceholderPattern from '../../components/PlaceholderPattern.vue';
-import {onMounted, ref, watch, toRaw, useTemplateRef, useId, onUnmounted} from 'vue';
-import { useDark, useToggle } from '@vueuse/core'
+import {onMounted, ref, watch, toRaw, useTemplateRef, useId, onUnmounted, onBeforeUnmount} from 'vue';
 
 import "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+
+// https://kamranahmed.info/toast
+import "https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.js"
 
 import Loading, {useLoading} from 'vue-loading-overlay'
 import 'vue-loading-overlay/dist/css/index.css';
@@ -17,6 +29,7 @@ import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import 'bootstrap';
 import TooltipBase from '@/components/TooltipBase.vue';
+import { ToastRoot } from 'reka-ui';
 
 
 /**
@@ -35,6 +48,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 const $loading = useLoading({});
 const overlayContinue = ref(false);
+const isDark = ref(true);
 
 let scopeId:string = "";
 let zoomed = false;
@@ -50,7 +64,6 @@ const props = defineProps({
 const page = usePage<SharedData>();
 const user = page.props.auth.user as User;
 // const curUser = toRaw(user);
-// console.log(curUser);
 
 const directions = {
 	"left":[0,-1],
@@ -98,6 +111,9 @@ const timerval1 = ref(0);
 let timerRunning = false;
 let interval1 = null;
 
+
+const hasUnsavedChanges = ref(false); // Track changes, e.g., in a form
+
 const board = ref([
 	["  ","  ","  ","  ","  ","  "],
 	["  ","  "," 5","  ","  ","  "],
@@ -115,14 +131,13 @@ const maxZoom = ref(40);
 const minZoom = ref(6);
 const newPageLoader = ref();
 
-const isDark = useDark()
-// const toggleDark = useToggle(isDark)
 
 const minDate = new Date("2005/01/01").getTime();
 const maxDate = Date.now();
 const difficulties = ref(['small', 'medium', 'large', 'mixed']);
 
 const pb = ref('');
+const preventLeaveForm = useForm({preventLeave: true});
 
 $(document).on('show.bs.modal', '.modal', async (event) =>{
 	await sleep(1)
@@ -131,11 +146,25 @@ $(document).on('show.bs.modal', '.modal', async (event) =>{
 window.onfocus = focusPage;
 window.onblur = unfocusPage;
 
+// window.addEventListener("beforeunload", (e) => {
+// 	// conso
+//     e.preventDefault()
+//     // chrome requires returnValue to be set
+//     const message = "You have unsaved changes. Are you sure you wish to leave?"
+//     e.returnValue = message
+//     return message
+// })
+
 onMounted(()=>{
+	// window.addEventListener('beforeunload', handleBeforeUnload);
+	window.addEventListener('popstate', handlePopstateEvent);
+	// document.addEventListener('inertia:before', handleInertiaBefore);
+	observeDarkMode();
 	difficulty.value = 'small';
 	if(difficulties.value.includes(props.size)){
 		difficulty.value = props.size;
-
+	}else if(props.size == 'custom'){
+		difficulty.value = props.size;
 	}
 	const timezoneoffset = getTimezoneOffset();
 	let initMonth = props.month||'';
@@ -189,14 +218,42 @@ onMounted(()=>{
 		&& localStorage.getItem('board_continue') != null
 	){
 		continueBoard();
+		getPersonalBest();
+	}else if(difficulty.value=='custom' && localStorage.getItem('custom_board') != null){
+		constructCustomBoard();
+		$("#flag_pb").hide();
 	}else{
 		findPuzzleByDate(slashDate);
+		getPersonalBest();
 	}
-	getPersonalBest();
 })
+// onBeforeUnmount(()=>{
+	// console.log("before unmount");
+	// let tof = confirm("Are you sure you want to leave this page?");
+
+	// // chrome requires returnValue to be set
+	// const message = "You have unsaved changes. Are you sure you wish to leave?"
+	// event.returnValue = message
+	// return message
+// })
+// onBeforeUnmount((event:any)=>{
+// 	console.log("before unmount");
+// 	console.log(event)
+// })
 onUnmounted(()=>{
+	// let tof = confirm("Are you sure you want to leave this page?");
+	// if(!tof){
+	// 	event?.preventDefault();
+	// 	return;
+	// }
+
+	window.removeEventListener('beforeunload', handleBeforeUnload);
+	window.removeEventListener('popstate', 	 handlePopstateEvent);
+	// document.removeEventListener('inertia:before', handleInertiaBefore);
+	// removeBeforeEventListener();
 	if(newPageLoader.value === undefined) return
 	newPageLoader.value.hide()
+
 })
 
 watch(board, (newBoard)=>{
@@ -238,7 +295,44 @@ watch(boardZoom, (val)=>{
 
 clearBoard(board.value)
 
-async function findPuzzleByDate(slashDate){
+const handleBeforeUnload = (event:any) => {
+
+	// console.log("unmount 284");
+	// if (hasUnsavedChanges.value) {
+	// 	// Cancel the event and prompt user for confirmation
+	// 	event.preventDefault();
+	// 	// Chrome requires returnValue to be set, but the message is ignored
+	// 	event.returnValue = '';
+	// }
+
+
+    event.preventDefault()
+    // chrome requires returnValue to be set
+    const message = "You have unsaved changes. Are you sure you wish to leave?kpl"
+    event.returnValue = message
+    return message
+};
+const handlePopstateEvent = (event) =>{
+	console.log('pop event');
+	history.go()
+	// if (hasUnsavedChanges.value) {
+		// if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+			event.preventDefault(); // Cancel the Inertia visit
+			event.stopPropagation();
+		// }
+		preventLeaveForm.cancel();
+	// }
+};
+
+// let removeBeforeEventListener = router.on('before', (event) => {
+// 	console.log("inertia before")
+// 	let tof = confirm('Are you sure you want to navigate away?');
+//     if (!tof) {
+//         event.preventDefault()
+//     }
+// })
+
+async function findPuzzleByDate(slashDate:any){
 	const loader = $loading.show();
 	try {
 		const v = await axios.post(
@@ -256,7 +350,7 @@ async function findPuzzleByDate(slashDate){
 		move.value = [];
 
 		const data = v.data.puzzleData;
-		// const h = data.gridHeight;
+		const h = data.gridHeight;
 		const w = data.gridWidth;
 		const g = data.data.startingGrid;
 
@@ -272,6 +366,7 @@ async function findPuzzleByDate(slashDate){
 		zoom = parseFloat(zoom.toFixed(1))
 		minZoom.value = zoom;
 		$('#nurikabe').css('--col_count', w);
+		$('#nurikabe').css('--row_count', h);
 
 		Object.entries(g).forEach(([k,v]) => {
 			const x = parseInt(k/w);
@@ -305,6 +400,69 @@ async function findPuzzleByDate(slashDate){
 		loader.hide();
 	}
 }
+function constructCustomBoard(){
+	// overlayContinue.value = true;
+
+	let tempBoard:(string|number)[][]=[[]];
+	const customBoard = JSON.parse(localStorage.getItem('custom_board')??"[[ ]]");
+
+	for (let x = 0; x < customBoard.length; x++) {
+		tempBoard[x] = [];
+		for (let y = 0; y < customBoard[x].length; y++) {
+
+				tempBoard[x][y] = " "+(customBoard[x][y]||" ");
+		}
+	}
+	board.value = tempBoard;
+	ogboard = tempBoard;
+
+	try {
+
+		// const h = data.gridHeight;
+		const h = board.value.length;
+		const w = board.value[0].length;
+
+		// ogboard =[[]]
+
+		// update scale
+		// const sqrSize = $('#nurikabe').css('--sqr_size').slice(0,-2);;
+		let boardWidth = $('#wrap_board').css('width'); // get board width
+		boardWidth = boardWidth.slice(0,-2); // remove the unit PX
+
+		let zoom = ((boardWidth - 16)/w)/1.8;
+		zoom = Math.min(zoom, 30);
+		zoom = parseFloat(zoom.toFixed(1))
+		minZoom.value = zoom;
+		$('#nurikabe').css('--col_count', w);
+		$('#nurikabe').css('--row_count', h);
+
+		// Object.entries(g).forEach(([k,v]) => {
+		// 	const x = parseInt(k/w);
+		// 	const y = k%w;
+		// 	if(ogboard[x] == undefined) ogboard[x] = [];
+
+		// 	if(v == 0){
+		// 		ogboard[x][y]= "  ";
+		// 	}else{
+		// 		ogboard[x][y]= " "+v;
+		// 	}
+		// });
+		boardZoom.value = minZoom.value;
+
+		timerval1.value=0;
+		timerRunning = false;
+		clearInterval(interval1);
+		// interval1 = setInterval(()=>{timerval1.value++}, 1000);
+
+	} catch (err) {
+		console.log(err);
+		alert(`API Error: Fetching board failed. `);
+	} finally {
+		// $('#newBoardModal').modal('hide');
+		// loader.hide();
+	}
+}
+
 function continueBoard(){
 	overlayContinue.value = true;
 
@@ -315,7 +473,7 @@ function continueBoard(){
 
 	try {
 
-		// const h = data.gridHeight;
+		const h = board_data.gridHeight;
 		const w = board_data.gridWidth;
 		const g = board_data.startingGrid;
 
@@ -331,6 +489,7 @@ function continueBoard(){
 		zoom = parseFloat(zoom.toFixed(1))
 		minZoom.value = zoom;
 		$('#nurikabe').css('--col_count', w);
+		$('#nurikabe').css('--row_count', h);
 
 		Object.entries(g).forEach(([k,v]) => {
 			const x = parseInt(k/w);
@@ -359,12 +518,21 @@ function continueBoard(){
 	}
 }
 async function saveBoard(){
+	$.toast({
+		text: 'Saved!',
+		icon: 'success',
+		showHideTransition: 'fade',
+		position: 'bottom-right',
+		loader:false,
+		hideAfter: 2000,
+	})
+
     localStorage.setItem('board', JSON.stringify(board.value??[[' ']]));
     localStorage.setItem('move', JSON.stringify(move.value??[[' ']]));
 	$("#btnLoad").prop('disabled', false);
-	$('#btnLoad').addClass('breathe');
-	await sleep(1000);
-	$('#btnLoad').removeClass('breathe');
+	// $('#btnLoad').addClass('breathe');
+	// await sleep(1000);
+	// $('#btnLoad').removeClass('breathe');
 }
 function loadBoard(){
 	board.value = JSON.parse(localStorage.getItem('board')??"[[ ]]");
@@ -493,7 +661,8 @@ function highlightWall(square:number[]) {
 			if(boardClass.value[value[0]+coord[0]] == undefined) return;
 
 			neighboringSquare = boardClass.value[value[0]+coord[0]][value[1]+coord[1]];
-			if(neighboringSquare== undefined) return;
+
+			if(neighboringSquare == undefined) return;
 			if(neighboringSquare.visited){
 				boardClass.value[value[0]][value[1]]['wall_highlighted-'+direction]=false;
 				boardClass.value[value[0]+coord[0]][value[1]+coord[1]]['wall_highlighted-'+inverseDirections[direction]]=false;
@@ -511,7 +680,7 @@ function highlightWall(square:number[]) {
 				}
 			}
 
-
+			if(neighboringSquare == undefined) return;// not sure why I need this but remove this give me error. issue in mid/2026/02/28
 			if(!neighboringSquare.wall) return;
 
 			queue.push([value[0]+coord[0],value[1]+coord[1]])
@@ -821,6 +990,7 @@ function isCorner(x:number,y:number){
 	})
 }
 function gotoNewPage(){
+	console.log('new page');
 	const newUrl = route('Board', [
 		newDifficulty.value,
 		date.value.getFullYear(),
@@ -966,6 +1136,8 @@ function randomFetch(){
 	// findPuzzleByDate()
 }
 async function recordWin(){
+	if(difficulty.value == 'custom') return;// dont save custom board
+
 	const winDate = date.value.getFullYear()+ '-'+
 		('0'+(date.value.getMonth()+1)).slice(-2)+ '-'+
 		('0'+date.value.getDate()).slice(-2)
@@ -1047,6 +1219,19 @@ async function handleContinueLoader(){
 	$('body').focus();
 	await sleep(1);
 	$('#btnRedo').focus();
+}
+
+function observeDarkMode(){
+	isDark.value = document.documentElement.classList.contains('dark');
+	const observer = new MutationObserver((mutations) => {
+		mutations.forEach((mutation) => {
+			if (mutation.attributeName === 'class') {
+				const element = mutation.target;
+				isDark.value = element.classList.contains('dark');
+			}
+		});
+	});
+	observer.observe(document.documentElement, { attributes: true });
 }
 
 // ++++++UTIL
@@ -1168,6 +1353,7 @@ function pointerupHandler(ev) {
 <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script> -->
 <style lang='css' scoped>
 	@import url('bootstrap/dist/css/bootstrap.min.css');
+	@import url('https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.css');
 	@import url('./board.css');
 
 </style>
@@ -1177,7 +1363,7 @@ function pointerupHandler(ev) {
 	<Head title="Board" />
 
 	<AppLayout :breadcrumbs="breadcrumbs"
-	tabindex='0'
+		tabindex='0'
 		@blur='unfocusPage()' @focus='focusPage()'
 		@keyup.ctrl.z.exact='undo()'
 		@keyup.ctrl.shift.z.exact='redo()' @keyup.ctrl.y.exact='redo()'
@@ -1235,6 +1421,7 @@ function pointerupHandler(ev) {
 					</table>
 				</div>
 			</div>
+
 			<!-- Modal -->
 			<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true"
 				:data-bs-theme="isDark?'dark':'light'"
@@ -1266,17 +1453,25 @@ function pointerupHandler(ev) {
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 						</div>
 						<div class="modal-body">
+							Definition
 							<ul>
 								<li>Wall cells are full filled cell</li>
 								<li>Hint cells are cell with a number.</li>
 								<li>Island cells are cell with a dot.</li>
+							</ul>
+							<span>Controls</span>
+							<ul>
 								<li>Click/tap a cell to fill a wall. Click/tap again to turn it to island. Click/tap again to return it to empty.</li>
 								<li>HINT cell + rightclick/longpress = show possible move and count island size. </li>
 								<li>WALL cell + rightclick/longpress = highlight contigous wall. </li>
 								<li>Ctrl+Z = Undo</li>
 								<li>Ctrl+Y or Ctrl+Shft+Z = Redo</li>
+							</ul>
+							<span>Quality of Life</span>
+							<ul>
 								<li>The first few walls are filled in.</li>
 							</ul>
+
 						</div>
 						<div class="modal-footer">
 							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -1344,5 +1539,9 @@ function pointerupHandler(ev) {
 			</div><!-- end Modal-->
 		</div>
 	</AppLayout>
+	<!-- <ToastRoot>
+
+
+	</ToastRoot> -->
 </template>
 

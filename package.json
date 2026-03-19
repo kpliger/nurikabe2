@@ -5,7 +5,7 @@
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
         "dev": "vite",
-        "dev2": "vite --host 192.168.1.75",
+        "dev2": "vite --host 192.168.1.72",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix"
@@ -29,6 +29,7 @@
         "@inertiajs/vue3": "^2.0.0-beta.3",
         "@popperjs/core": "^2.11.8",
         "@tailwindcss/vite": "^4.1.1",
+        "@techstark/opencv-js": "^4.12.0-release.1",
         "@vitejs/plugin-vue": "^5.2.1",
         "@vue/compat": "^3.5.13",
         "@vuepic/vue-datepicker": "^11.0.3",

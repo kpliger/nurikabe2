@@ -56,6 +56,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 						<li>Database to store user and history</li>
 						<li>Dark mode theme. Tested on Firefox, Chrome and Edge</li>
 						<li>Board is taken from an API from https://puzzlemadness.co.uk</li>
+						<li>Image Recognition using OpenCV.js and Tesseract.js</li>
 					</ul>
 				</div>
 			</div>

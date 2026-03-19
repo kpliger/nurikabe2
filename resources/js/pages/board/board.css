@@ -2,6 +2,7 @@
 #nurikabe {
   --sqr_size: 31px;
   --col_count: 6;
+  --row_count: 6;
 }
 
 .btn {
@@ -18,7 +19,7 @@ details ul li::marker,
 }
 
 .square {
-  --count: "0";
+  --count: '0';
   --hover-color: rgba(0, 114, 0, 0.917);
   --root-hightlight: chartreuse;
   font-size: var(--sqr_size);
@@ -34,12 +35,10 @@ details ul li::marker,
   position: relative;
   color: black;
 }
-@media (prefers-color-scheme: dark) {
-  .square {
-    color: white;
-    --hover-color: chartreuse;
-    --root-hightlight: rgba(0, 114, 0, 0.917);
-  }
+html.dark .square {
+  color: white;
+  --hover-color: chartreuse;
+  --root-hightlight: rgba(0, 114, 0, 0.917);
 }
 .square.root_highlight::after {
   content: var(--count);
@@ -73,10 +72,8 @@ details ul li::marker,
 .square.wall {
   background-color: black;
 }
-@media (prefers-color-scheme: dark) {
-  .square.wall {
-    background-color: white;
-  }
+html.dark .square.wall {
+  background-color: white;
 }
 .square.wall_highlighted-left {
   border-left: 2px solid deepskyblue;
@@ -93,10 +90,8 @@ details ul li::marker,
 .square.island_highlighted {
   background-color: rgba(108, 236, 108, 0.917);
 }
-@media (prefers-color-scheme: dark) {
-  .square.island_highlighted {
-    background-color: rgba(0, 114, 0, 0.917);
-  }
+html.dark .square.island_highlighted {
+  background-color: rgba(0, 114, 0, 0.917);
 }
 
 table#gameboard {
@@ -105,15 +100,13 @@ table#gameboard {
   position: relative;
   table-layout: fixed;
   width: calc(var(--sqr_size) * var(--col_count) * 1.7);
-  height: calc(var(--sqr_size) * var(--col_count) * 1.7);
+  height: calc(var(--sqr_size) * var(--row_count) * 1.7);
   background-color: rgb(237, 241, 251);
   box-shadow: 0 0 0 5px gray;
 }
-@media (prefers-color-scheme: dark) {
-  table#gameboard {
-    border: 1px solid white;
-    background-color: rgb(32, 35, 43);
-  }
+html.dark table#gameboard {
+  border: 1px solid white;
+  background-color: rgb(32, 35, 43);
 }
 table#gameboard.zoomed {
   margin: 0.5em 50px;
@@ -166,13 +159,6 @@ table#gameboard.zoomed {
   pointer-events: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  /* CSS rules for dark mode */
-  #api_difficulty {
-    color: white;
-    background-color: black;
-  }
-}
 #tbl_moves {
   border: 3px solid;
 }
@@ -232,11 +218,9 @@ table#gameboard.zoomed {
   z-index: 3;
   border-bottom: 1px solid black;
 }
-@media (prefers-color-scheme: dark) {
-  #wrap_gameactions {
-    border-bottom: 1px solid white;
-    background-color: black;
-  }
+html.dark #wrap_gameactions {
+  border-bottom: 1px solid white;
+  background-color: black;
 }
 
 #flag_pb {
@@ -264,12 +248,12 @@ table#gameboard.zoomed {
 }
 #continueLoader .loaderText {
   --continue-overlay:rgba(255,255,255,0.5);
+}
+html.dark #continueLoader .loaderText {
+  --continue-overlay: rgba(0,0,0,0.5);
+}
+#continueLoader .loaderText {
   box-shadow: 0 0 4px 5px var(--continue-overlay);
   font-size: 1.5em;
   background-color: var(--continue-overlay);
-}
-@media (prefers-color-scheme: dark) {
-  #continueLoader .loaderText {
-    --continue-overlay: rgba(0,0,0,0.5);
-  }
 }/*# sourceMappingURL=board.css.map */

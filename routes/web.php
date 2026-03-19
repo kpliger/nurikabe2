@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\NurikabeApiController;
+use App\Http\Controllers\Board\BoardController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -37,6 +38,9 @@ Route::get('explanation', function () {
 Route::get('board/{size?}/{year:year?}/{month:month?}/{day:day?}', [NurikabeApiController::class, 'playBoard'])
     // ->middleware(['auth', 'verified'])
     ->name('Board');
+Route::get('builder', function () {
+    return Inertia::render('builder/Builder');
+})->name('Builder');
 
 Route::post('fetchapi', [NurikabeApiController::class, 'getBoard']);
 Route::post('history/recordWin', [HistoryController::class, 'recordWin']);
