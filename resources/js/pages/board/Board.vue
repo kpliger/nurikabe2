@@ -990,7 +990,6 @@ function isCorner(x:number,y:number){
 	})
 }
 function gotoNewPage(){
-	console.log('new page');
 	const newUrl = route('Board', [
 		newDifficulty.value,
 		date.value.getFullYear(),
