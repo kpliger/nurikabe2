@@ -5,6 +5,7 @@
  * 	- leave page prompt when history back/forward(popstate) event
  * 		- router.on(before) dont work
  * 		- handleBeforeUnload works but half of the story
+ * 		- atm, this don't work
  *
  */
 
@@ -12,7 +13,7 @@
 import axios from 'axios';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { SharedData, type BreadcrumbItem, type User } from '@/types';
-import { Head, Link, router, useForm, usePage, } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PlaceholderPattern from '../../components/PlaceholderPattern.vue';
 import {onMounted, ref, watch, toRaw, useTemplateRef, useId, onUnmounted, onBeforeUnmount} from 'vue';
 
@@ -30,7 +31,6 @@ import '@vuepic/vue-datepicker/dist/main.css';
 import 'bootstrap';
 import TooltipBase from '@/components/TooltipBase.vue';
 import { ToastRoot } from 'reka-ui';
-
 
 /**
  * Note
@@ -151,15 +151,27 @@ window.onblur = unfocusPage;
 //     e.preventDefault()
 //     // chrome requires returnValue to be set
 //     const message = "You have unsaved changes. Are you sure you wish to leave?"
-//     e.returnValue = message
+//     e.returnValue = message`
 //     return message
 // })
 
 onMounted(()=>{
-	// window.addEventListener('beforeunload', handleBeforeUnload);
+
+	window.addEventListener('beforeunload', handleBeforeUnload);
 	window.addEventListener('popstate', handlePopstateEvent);
 	// document.addEventListener('inertia:before', handleInertiaBefore);
 	observeDarkMode();
+	addTouchListeners()
+
+
+	$('main').css('overflow', 'auto')
+	$('main').css('height', 'calc(100vh - 1em)')
+	$('#btnRedo').focus();
+
+	scopeId = Object.keys($("#nurikabe").data()).find(elem => elem.includes('v-'));
+	$('.modal-backdrop').remove()
+
+
 	difficulty.value = 'small';
 	if(difficulties.value.includes(props.size)){
 		difficulty.value = props.size;
@@ -187,25 +199,6 @@ onMounted(()=>{
 		router.get(`/board/${difficulty.value}`)
 		return;
 	}
-
-	el = document.getElementById("wrap_board");
-	el.onpointerdown = pointerdownHandler;
-	el.onpointermove = pointermoveHandler;
-
-	// Use same handler for pointer{up,cancel,out,leave} events since
-	// the semantics for these events - in this app - are the same.
-	el.onpointerup = pointerupHandler;
-	el.onpointercancel = pointerupHandler;
-	// el.onpointerout = pointerupHandler; kpl(2025-11-07): commented because it's firing too much
-	el.onpointerleave = pointerupHandler;
-
-	$('main').css('overflow', 'auto')
-	$('main').css('height', 'calc(100vh - 1em)')
-	$('#btnRedo').focus();
-
-	scopeId = Object.keys($("#nurikabe").data()).find(elem => elem.includes('v-'));
-	$('.modal-backdrop').remove()
-
 
 	let slashDate = date.value.getFullYear()+"/"+
 		(date.value.getMonth()+1)+"/"+
@@ -249,8 +242,6 @@ onUnmounted(()=>{
 
 	window.removeEventListener('beforeunload', handleBeforeUnload);
 	window.removeEventListener('popstate', 	 handlePopstateEvent);
-	// document.removeEventListener('inertia:before', handleInertiaBefore);
-	// removeBeforeEventListener();
 	if(newPageLoader.value === undefined) return
 	newPageLoader.value.hide()
 
@@ -295,17 +286,8 @@ watch(boardZoom, (val)=>{
 
 clearBoard(board.value)
 
+// seems to only work with refresh, not history back/forward(popstate) event
 const handleBeforeUnload = (event:any) => {
-
-	// console.log("unmount 284");
-	// if (hasUnsavedChanges.value) {
-	// 	// Cancel the event and prompt user for confirmation
-	// 	event.preventDefault();
-	// 	// Chrome requires returnValue to be set, but the message is ignored
-	// 	event.returnValue = '';
-	// }
-
-
     event.preventDefault()
     // chrome requires returnValue to be set
     const message = "You have unsaved changes. Are you sure you wish to leave?kpl"
@@ -314,23 +296,18 @@ const handleBeforeUnload = (event:any) => {
 };
 const handlePopstateEvent = (event) =>{
 	console.log('pop event');
-	history.go()
-	// if (hasUnsavedChanges.value) {
-		// if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
-			event.preventDefault(); // Cancel the Inertia visit
-			event.stopPropagation();
-		// }
-		preventLeaveForm.cancel();
+
+	// history.pushState(null, null, window.location.href);
+
+	// history.go()
+	// // if (hasUnsavedChanges.value) {
+	// 	// if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+			// event.preventDefault(); // Cancel the Inertia visit
+			// event.stopPropagation();
+	// 	// }
+		// preventLeaveForm.cancel();
 	// }
 };
-
-// let removeBeforeEventListener = router.on('before', (event) => {
-// 	console.log("inertia before")
-// 	let tof = confirm('Are you sure you want to navigate away?');
-//     if (!tof) {
-//         event.preventDefault()
-//     }
-// })
 
 async function findPuzzleByDate(slashDate:any){
 	const loader = $loading.show();
@@ -535,9 +512,15 @@ async function saveBoard(){
 	// $('#btnLoad').removeClass('breathe');
 }
 function loadBoard(){
+	const curMove = toRaw(move.value);
+	const oldMoves = JSON.parse(localStorage.getItem('move')??"[[ ]]");
+	const diffMove = curMove
+		.filter((x:any) => !oldMoves.some((y:any) => y[0] === x[0] && y[1] === x[1]))
+		.reverse();
+
 	board.value = JSON.parse(localStorage.getItem('board')??"[[ ]]");
-	move.value = JSON.parse(localStorage.getItem('move')??"[[ ]]");
-	move_r.value = [];
+	move.value = oldMoves;
+	move_r.value = diffMove;
 }
 
 function clearBoard(newBoard:any){
@@ -560,7 +543,8 @@ function clearBoard(newBoard:any){
 				'root_highlight':false,
 				"corner_checked":false,
 				"roothint": "",
-				hint: isNumber(column)
+				hint: isNumber(column),
+				island_size: 0,
 			}
 			if(isNumber(column)){
 				hints.push([indexX,indexY])
@@ -1231,6 +1215,18 @@ function observeDarkMode(){
 		});
 	});
 	observer.observe(document.documentElement, { attributes: true });
+}
+function addTouchListeners(){
+	el = document.getElementById("wrap_board");
+	el.onpointerdown = pointerdownHandler;
+	el.onpointermove = pointermoveHandler;
+
+	// Use same handler for pointer{up,cancel,out,leave} events since
+	// the semantics for these events - in this app - are the same.
+	el.onpointerup = pointerupHandler;
+	el.onpointercancel = pointerupHandler;
+	// el.onpointerout = pointerupHandler; kpl(2025-11-07): commented because it's firing too much
+	el.onpointerleave = pointerupHandler;
 }
 
 // ++++++UTIL

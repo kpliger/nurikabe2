@@ -65,13 +65,13 @@ const newPageLoader = ref();
 
 const rowInt = ref(5);
 const colInt = ref(5);
+let cvReady = ref(true);
 
 $(document).on('show.bs.modal', '.modal', async (event) =>{
 	await sleep(1)
 	$('.modal-backdrop').attr(`data-${scopeId}`,"")
 })
 
-let cvReady = ref(true);
 
 
 onMounted( async()=>{
@@ -84,8 +84,6 @@ onMounted( async()=>{
 			cvReady.value = false;
 		}
 		document.body.appendChild(script);
-	}else{
-		cvReady.value = false;
 	}
 
 	observeDarkMode();
@@ -391,7 +389,6 @@ const processImage = async (imgElement:any)=>{
 
 	loader.hide();
 	$("#uploadModal").modal('hide');
-	// $("#uploadModal .btn-close").click();// workaround to close modal
 
 	// Cleanup
 	src.delete(); gray.delete(); thresh.delete();
@@ -490,11 +487,6 @@ function isImageDarkMode(mat:any) {
     // threshold (adjustable)
     return brightness < 128;
 }
-function displayImage(cvMat:any){
-	let canvas = document.createElement("canvas");
-	cv.imshow(canvas, cvMat);
-	document.getElementById("canvasgroup")?.append(canvas);
-}
 function applyImageData(data){
 	const rowLen = data.length;
 	const colLen = data[0].length;
@@ -508,10 +500,9 @@ function observeDarkMode(){
 	isDark.value = document.documentElement.classList.contains('dark');
 	const observer = new MutationObserver((mutations) => {
 		mutations.forEach((mutation) => {
-			if (mutation.attributeName === 'class') {
-				const element = mutation.target;
-				isDark.value = element.classList.contains('dark');
-			}
+			if (mutation.attributeName !== 'class') return;
+			const element = mutation.target;
+			isDark.value = element.classList.contains('dark');
 		});
 	});
 	observer.observe(document.documentElement, { attributes: true });
