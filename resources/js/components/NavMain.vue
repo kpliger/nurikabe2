@@ -20,7 +20,7 @@ const page = usePage<SharedData>();
                     :tooltip="item.title"
                 >
                     <Link :href="item.href">
-                        <component :is="item.icon" style="height:2em; width:2em;"/>
+                        <component :is="item.icon" style="height:1.5em; width:1.5em;"/>
                         <span>{{ item.title }}</span>
                     </Link>
                 </SidebarMenuButton>

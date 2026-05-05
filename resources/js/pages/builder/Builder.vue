@@ -67,6 +67,8 @@ const rowInt = ref(5);
 const colInt = ref(5);
 let cvReady = ref(true);
 
+let hasUpload = ref({show:false})
+
 $(document).on('show.bs.modal', '.modal', async (event) =>{
 	await sleep(1)
 	$('.modal-backdrop').attr(`data-${scopeId}`,"")
@@ -84,17 +86,23 @@ onMounted( async()=>{
 			cvReady.value = false;
 		}
 		document.body.appendChild(script);
+	}else{
+		cvReady.value = false;
 	}
 
 	observeDarkMode();
 
 	let imgElement = document.getElementById('imageSrc');
+	let imgSide = document.getElementById('imgSide');
 	let inputElement = document.getElementById('fileInput');
 	inputElement.addEventListener('change', (e) => {
-		imgElement.src = URL.createObjectURL(e.target.files[0]);
+		const imgUrl = URL.createObjectURL(e.target.files[0]);
+		imgElement.src = imgUrl;
+		imgSide.src = imgUrl;
+		showImagePreview();
 
 		const img = document.createElement("img");
-		img.src = URL.createObjectURL(e.target.files[0]);
+		img.src = imgUrl;
 		img.onload = () => {
 			processImage(img);
 		};
@@ -103,7 +111,7 @@ onMounted( async()=>{
 	// 	// processImage(imgElement);
 	// };
 
-
+// / *
 	el = document.getElementById("wrap_board");
 	el.onpointerdown = pointerdownHandler;
 	el.onpointermove = pointermoveHandler;
@@ -115,6 +123,7 @@ onMounted( async()=>{
 	// el.onpointerout = pointerupHandler; kpl(2025-11-07): commented because it's firing too much
 	el.onpointerleave = pointerupHandler;
 
+	// * /
 	$('main').css('overflow', 'auto')
 	$('main').css('height', 'calc(100vh - 1em)')
 
@@ -183,6 +192,9 @@ function updateDimension(column:any, row:any){
 function goPlayCustom(){
 	localStorage.setItem('custom_board', JSON.stringify(board.value));
 	router.visit(route('Board', ['custom']))
+
+	localStorage.removeItem(
+		'timer_continue');
 }
 
 function clearBoard(){
@@ -395,6 +407,9 @@ const processImage = async (imgElement:any)=>{
 	vertical.delete(); horizontal.delete(); intersections.delete();
 	contours.delete(); hierarchy.delete();
 }
+const showImagePreview = ()=>{
+	hasUpload.value.show=true;
+}
 function hasNumber(cell:any){
 
 	let gray = new cv.Mat();
@@ -495,6 +510,8 @@ function applyImageData(data){
 	rowInt.value = rowLen;
 
 	board.value = data;
+
+	updateDimension(colLen, rowLen)
 }
 function observeDarkMode(){
 	isDark.value = document.documentElement.classList.contains('dark');
@@ -676,8 +693,8 @@ function pointerupHandler(ev) {
 				<!-- <input type="range" name="" id="rangeZoom" v-model='boardZoom' :min="minZoom" :max='maxZoom'
 					step=".1" disabled style="width:100%;" > -->
 			</div>
-			<div>
-				<div id="wrap_board">
+			<div id="wrap_main">
+				<div id="wrap_board" :class="hasUpload">
 					<table id='gameboard' class="">
 						<tr v-for='(_,x) in board.length' :key='x' class=''>
 							<td v-for='(_, y) in board[x].length' :key='y' class='square'
@@ -709,6 +726,10 @@ function pointerupHandler(ev) {
 						</tr>
 					</table>
 				</div>
+				<div id="wrap_image" :class="hasUpload">
+					<!--  -->
+					<img id="imgSide" alt='NO IMAGE'/>
+				</div>
 			</div>
 
 			<!-- Modal -->
@@ -725,7 +746,7 @@ function pointerupHandler(ev) {
 							<i style="font-size: .8em;">Note: Image recognition is inaccurate and slow. Bigger image will yield better results. Speed depends on the board size and your device.</i>
 
 							<div id="pastingArea" tabindex="0"
-								@paste="pasteClipboard($event, 'imageSrc', processImage)"
+								@paste="pasteClipboard($event, 'imageSrc', processImage); pasteClipboard($event, 'imgSide', showImagePreview); "
 							>Paste image from clipboard here.</div>
 							<div>OR</div>
 							<input type="file" id="fileInput" name="file"

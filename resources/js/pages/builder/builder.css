@@ -70,12 +70,17 @@ table#gameboard.zoomed {
 #wrap_board {
   position: relative;
   overflow: auto;
-  min-height: calc(100vh - 210px);
   touch-action: none; /* Prevent default touch behavior */
   padding-top: 10px;
   padding-right: 10px;
-  padding-bottom: 10em;
   padding-left: 10px;
+  width: 500px;
+  flex-grow: 5;
+}
+@media (max-width: 600px) {
+  #wrap_board.show {
+    margin-bottom: 10em;
+  }
 }
 
 #fullboardchange {
@@ -111,14 +116,13 @@ table#gameboard.zoomed {
   position: sticky;
   top: 0;
   margin-top: -1em;
-  background-color: white;
+  background-color: var(--background);
   padding-bottom: 0.5em;
   z-index: 3;
   border-bottom: 1px solid black;
 }
 html.dark #wrap_gameactions {
   border-bottom: 1px solid white;
-  background-color: black;
 }
 
 #btnLoad.breathe {
@@ -182,4 +186,41 @@ html.dark #fileInput {
 #pastingArea:focus,
 #fileInput:focus {
   box-shadow: 0px 0px 0.2em 0.2em var(--focus-color);
+}
+
+#wrap_main {
+  display: flex;
+  flex-wrap: wrap;
+  padding-bottom: 6em;
+  -moz-column-gap: 0.5em;
+       column-gap: 0.5em;
+}
+
+#wrap_image {
+  width: 200px;
+  flex-grow: 1;
+  display: none;
+}
+#wrap_image.show {
+  display: block;
+}
+@media (max-width: 600px) {
+  #wrap_image.show {
+    height: 250px;
+    overflow-y: auto;
+    position: fixed;
+    bottom: -3em;
+    width: 100vw;
+    margin-left: -1.5em;
+    padding: 0 1.5em 3em 1.5em;
+    background-color: var(--background);
+  }
+}
+
+#imgSide {
+  -o-object-fit: cover;
+     object-fit: cover;
+  margin: auto;
+  position: sticky;
+  top: 12em;
 }/*# sourceMappingURL=builder.css.map */

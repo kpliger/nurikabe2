@@ -1,6 +1,6 @@
 
 
-export const pasteClipboard = async(e, previewId:string, callback:Function) => {
+export const pasteClipboard = async(e, previewId:string, callback?:Function) => {
   e.preventDefault();
   const clipboardItems = typeof navigator?.clipboard?.read === 'function' ? await navigator.clipboard.read() : e.clipboardData.files;
 
@@ -30,9 +30,8 @@ function appendImage(blob:any, previewId:string, callback?:Function) {
 
   const img = document.createElement("img");
   img.src = URL.createObjectURL(blob);
-  img.onload = () => {
-    callback(img);
-  };
+  if(typeof callback != 'function') return;
+  img.onload = () => { callback(img); };
 };
 
 
