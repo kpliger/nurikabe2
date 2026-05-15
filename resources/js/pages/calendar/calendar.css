@@ -1,0 +1,51 @@
+#tbl_calendar {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  text-align: left;
+}
+#tbl_calendar thead {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+html.dark #tbl_calendar thead {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+#tbl_calendar thead th {
+  text-align: center;
+  vertical-align: top;
+  padding: 0.5em 0;
+}
+#tbl_calendar > tbody > tr > td {
+  padding: 0.25em;
+  vertical-align: top;
+  overflow: hidden;
+}
+#tbl_calendar > tbody > tr > td.disabled {
+  opacity: 0.3;
+}
+#tbl_calendar > tbody > tr > td .page-link {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8em;
+  border-bottom: 1px solid transparent;
+}
+#tbl_calendar > tbody > tr > td .page-link:hover {
+  border-bottom: 1px solid;
+}
+#tbl_calendar > tbody > tr > td .page-link .difficulty-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+#tbl_calendar > tbody > tr > td .page-link .difficulty-label:after {
+  content: "...............................................................................................";
+  display: inline;
+  overflow: hidden;
+  word-wrap: break-word;
+}
+
+#wrap_calendar {
+  border: 1px solid dimgray;
+  border-radius: 0.5em;
+}/*# sourceMappingURL=calendar.css.map */

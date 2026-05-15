@@ -32,4 +32,45 @@ class NurikabeApiController extends Controller
 			"day"	=> $day,
 		]);
 	}
+
+	public function showCalendar(Request $request, ?string $year=null, ?string $month=null){
+
+		if($year === null){
+			$year = date("Y");
+		}
+		if($month === null){
+			$month = date("m");
+		}
+		$search = sprintf("%d-%02d", $year, $month);
+
+		$histories = [];
+		if($request->user()){
+			$histories = $request->user()->history()
+				->where('game_date', 'like', '%'.$search.'%')
+				->groupby('game_date', 'difficulty')
+				->get(["difficulty", 'game_date']);
+		}
+
+		$prevMonth = date("Y-m", strtotime("$year-$month -1 month"));
+		$prevMonth = explode("-", $prevMonth);
+		$nextMonth = date("Y-m", strtotime("$year-$month +1 month"));
+		$nextMonth = explode("-",$nextMonth);
+
+
+
+		return Inertia::render("calendar/Calendar", [
+			"user"			=> $request->user(),
+			"year"			=> $year,
+			"month"			=> $month,
+			"history" 	=> $histories,
+			"prevMonth"	=> [
+				"year" =>$prevMonth[0],
+				"month" =>$prevMonth[1],
+			],
+			"nextMonth"	=> [
+				"year" =>$nextMonth[0],
+				"month" =>$nextMonth[1],
+			],
+		]);
+	}
 }

@@ -121,4 +121,31 @@ class HistoryController extends Controller
 		];
 		return \json_encode($response);
 	}
+	public function fetchDateCompletedSizes(Request $request)
+	{
+		$user = $request->user();
+		if($user === null) return [
+			'code'=>'1',
+			'data'=>'No user found',
+		];
+
+		$pb = $request->user()->history()
+			->select(["difficulty",])
+			->where([
+				["game_date", $request->date],
+			])
+			->groupby(["difficulty"])
+			->get()
+		;
+		$completedSized = [];
+		foreach ($pb as $key => $value) {
+			$completedSized[]=$value['difficulty'];
+		}
+
+		$response = [
+			'code'=>0,
+			'data'=> $completedSized,
+		];
+		return \json_encode($response);
+	}
 }

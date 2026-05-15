@@ -76,7 +76,8 @@ jobs:
           server: ${{ secrets.INFINITYFREE_SERVER }}
           username: ${{ secrets.INFINITYFREE_USERNAME }}
           password: ${{ secrets.INFINITYFREE_PASSWORD }}
-          server-dir: '/htdocs/nurikabe/'
+          server-dir: '/nurikabe-kpl.infinityfree.me/htdocs/'
+          # server-dir: '/htdocs/nurikabe/'
 
       # - name: Login to Azure
       #   uses: azure/login@v2

@@ -15,7 +15,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { SharedData, type BreadcrumbItem, type User } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PlaceholderPattern from '../../components/PlaceholderPattern.vue';
-import {onMounted, ref, watch, toRaw, useTemplateRef, useId, onUnmounted, onBeforeUnmount} from 'vue';
+import {onMounted, ref, watch, toRaw, useTemplateRef, useId, onUnmounted, onBeforeUnmount, compileToFunction} from 'vue';
 
 import "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"
 
@@ -173,6 +173,7 @@ const maxDate = Date.now();
 const difficulties = ref(['small', 'medium', 'large', 'mixed']);
 
 const pb = ref('');
+const completedSizes = ref<string[]>([]);
 const preventLeaveForm = useForm({preventLeave: true});
 
 $(document).on('show.bs.modal', '.modal', async (event) =>{
@@ -213,8 +214,8 @@ onMounted( async()=>{
 		hints:hints
 	})
 
-	window.addEventListener('beforeunload', handleBeforeUnload);
-	window.addEventListener('popstate', handlePopstateEvent);
+	// window.addEventListener('beforeunload', handleBeforeUnload);
+	// window.addEventListener('popstate', handlePopstateEvent);
 	// document.addEventListener('inertia:before', handleInertiaBefore);
 	observeDarkMode();
 	addTouchListeners()
@@ -242,7 +243,7 @@ onMounted( async()=>{
 
 	if(initMonth.length<2) initMonth = '0'+initMonth;
 	if(initDay.length<2) initDay = '0'+initDay;
-	initDate = `${props.year||''}-${initMonth}-${initDay}T00:00:00${timezoneoffset}`
+	initDate = `${props.year||''}-${initMonth}-${initDay}T01:00:00${timezoneoffset}`
 	date.value = new Date(initDate);
 	if(date.value == 'Invalid Date'){
 		if(props.day!==null){
@@ -266,6 +267,7 @@ onMounted( async()=>{
 
 	if(localStorage.getItem('board_det') == difficulty.value+"/"+dateFilter.value
 		&& localStorage.getItem('board_continue') != null
+		&& localStorage.getItem('timer_continue') != "0"
 	){
 		continueBoard();
 		if(difficulty.value!='custom'){
@@ -299,8 +301,8 @@ onUnmounted(()=>{
 	// 	return;
 	// }
 
-	window.removeEventListener('beforeunload', handleBeforeUnload);
-	window.removeEventListener('popstate', 	 handlePopstateEvent);
+	// window.removeEventListener('beforeunload', handleBeforeUnload);
+	// window.removeEventListener('popstate', 	 handlePopstateEvent);
 	if(newPageLoader.value === undefined) return
 	newPageLoader.value.hide()
 
@@ -331,7 +333,8 @@ watch(boardZoom, (val)=>{
 	const boardWrap:number = parseFloat($('#wrap_board').css('width').slice(0,-2));
 	const gameboard:number = parseFloat($('#gameboard').css('width').slice(0,-2));
 
-	if(gameboard-(val*-1.8)<=boardWrap){
+	if(gameboard+(100)<=boardWrap || $("#gameboard").hasClass("won")){
+	// if(gameboard-(val*-1.8)<=boardWrap){
 		$('#wrap_board').removeClass('zoomed')
 		zoomed = false;
 	}else{
@@ -371,7 +374,38 @@ watch(move,val=>{
 
 
 },  { deep: true })
+watch(date, async (val,prev)=>{
+	try {
+		if(prev != undefined && val != undefined && val.getTime() == prev.getTime()) return;
+		if(user === null) return;
 
+		let slashDate = val.getFullYear()+ '-'+
+			('0'+(val.getMonth()+1)).slice(-2)+ '-'+
+			('0'+val.getDate()).slice(-2)
+
+			// console.log(slashDate)
+
+
+		const v = await axios.post(
+			"/history/fetchDateCompletedSizes",
+			{
+				date: slashDate,
+			}
+		)
+		if(v.data.code > 0 || typeof v.data.data === "string"){
+			// console.log(v.data.data)
+			// throw "No Personal Best";
+			throw v.data.data;
+			// return;
+		}
+		completedSizes.value = v.data.data;
+
+	}catch(ex){
+		console.log(ex)
+	}finally{
+
+	}
+})
 
 clearBoard(board.value)
 
@@ -1221,7 +1255,7 @@ async function validateBoard(isToRecord = true){
 		}
 		const boardClass_copy = [...boardClass.value];
 		await Promise.all([
-			// checkHintsSatified(),
+			checkHintsSatified(),
 			// checkFor2By2(),
 			checkHas1Wall(root,boardClass_copy),
 		]);
@@ -1236,16 +1270,25 @@ async function validateBoard(isToRecord = true){
 		$('#rangeZoom').prop('disabled', true);
 		boardZoom.value = minZoom.value;
 
+
 		timerRunning = false;
 		clearInterval(interval1);
 		$("#exampleModal").modal('show')
 
 		localSaveReset();
+
 		// don't record if no user login
 		if(user === null) return true;
 		if(isToRecord){
 			recordWin();
+			if(!completedSizes.value.includes(difficulty.value)){
+				let ogValue = toRaw(completedSizes.value);
+				ogValue.push(difficulty.value)
+				completedSizes.value = ogValue;
+			}
 		}
+
+
 		return true;
 	}catch(ex){
 		console.log(ex)
@@ -1364,7 +1407,9 @@ function gotoNewPage(){
 
 async function getPersonalBest(){
 	try {
+
 		$("#flag_pb").hide();
+		if(user === null) return;
 		let slashDate = date.value.getFullYear()+ '-'+
 			('0'+(date.value.getMonth()+1)).slice(-2)+ '-'+
 			('0'+date.value.getDate()).slice(-2)
@@ -1389,6 +1434,7 @@ async function getPersonalBest(){
 
 	}
 }
+
 
 function redo(){
 	// console.log('redo')
@@ -1527,12 +1573,15 @@ async function recordWin(){
 	}
 
 }
+
+
 function focusPage(){
 	// Code to execute when the tab gains focus
 	// console.log('Tab is now focused');
+	// console.log(timerRunning, interval1)
 
-	const tagName = document.activeElement
-	if(timerRunning && interval1 === null){
+	// const tagName = document.activeElement
+	if(timerRunning && (interval1 === undefined || interval1 === 0)){
 		interval1 = setInterval(()=>{timerval1.value++}, 1000);
 	}
 }
@@ -1543,11 +1592,14 @@ function unfocusPage(){
 
 	if(tagName === "BODY" ) return; // dont stop clock if focused element is part of the newPageLoader
 	clearInterval(interval1);
-	interval1 = 0
+	interval1 = 0;
+
+	const gameTimer = (timerval1.value||0).toString();
+	if(gameTimer === "0") return;
 
 	localStorage.setItem('board_continue', JSON.stringify(board.value??[[' ']]));
 	localStorage.setItem('move_continue', JSON.stringify(move.value??[[' ']]));
-	localStorage.setItem('timer_continue', (timerval1.value||0).toString());
+	localStorage.setItem('timer_continue', gameTimer);
 }
 function scrollZoom(ev){
 	if($("#gameboard").hasClass('won')) return;
@@ -2535,7 +2587,7 @@ function isValidWall(x:number, y:number){
 				if(!cell.wall) continue;
 				if(queue.some(q=>q.x==x && q.y==y)) continue;
 				queue.forEach(value => boardClass.value[value.x][value.y].invalid = true);
-				console.log('Isolated wall' )
+				// console.log('Isolated wall' )
 				resolve(false);
 				return;
 			}
@@ -2706,19 +2758,19 @@ $(document).on('scroll', "*", (event)=> {
 					</div> -->
 
 					<table id='gameboard' class="won">
-						<thead>
+						<!-- <thead>
 							<tr>
 								<td class='board_ruler'	style=" width: 0px; "></td>
 								<td v-for='(_, y) in board[0].length' :key='y' class='board_ruler ruler_horizontal' :class="rulerH_fixed">
 									{{ y }}
 								</td>
 							</tr>
-						</thead>
+						</thead> -->
 						<tbody>
 							<tr v-for='(_,x) in board.length' :key='x' class=''>
-								<td class='board_ruler ruler_vertical'>
+								<!-- <td class='board_ruler ruler_vertical'>
 									{{ x}}
-								</td>
+								</td> -->
 								<td v-for='(_, y) in board[x].length' :key='y' class='square'
 									@click="setSquare(x, y)"
 									@contextmenu="highlightEntity(x,y)"
@@ -2840,13 +2892,12 @@ $(document).on('scroll', "*", (event)=> {
 								<td>
 									Size <br>
 									<div class="flex">
-										<div class="wrap_option ml-auto mr-auto">
-											<label v-for="(difficulty) in difficulties">
-												<input type="radio" name="difficulty" :value="difficulty" v-model="newDifficulty"
-
-												>
+										<div class="wrap_option">
+											<div v-for="(difficulty) in difficulties"><label>
+												<input type="radio" name="difficulty" :value="difficulty" v-model="newDifficulty">
 												{{ ucfirst(difficulty) }}
-											</label>
+												<template v-if="completedSizes.includes(difficulty)">✓</template>
+											</label></div>
 										</div>
 									</div>
 								</td>

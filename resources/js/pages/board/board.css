@@ -235,31 +235,39 @@ html.dark table#gameboard > tbody {
   font-size: 0.8em;
 }
 
-#det_api #tbl_filter td {
+#tbl_filter {
+  table-layout: fixed;
+}
+#tbl_filter > tr > td {
   padding: 0.5em 0;
 }
 
 .wrap_option {
   --option-color: gray;
-  display: inline-block;
+  display: inline-flex;
   border: 2px solid var(--option-color);
   border-radius: 0.25em;
+  justify-content: center;
+  max-width: 100%;
+  margin: 0 auto;
+}
+.wrap_option div {
+  display: flex;
+  justify-content: center;
+  padding: 0.25em 0.5em;
+  cursor: pointer;
+  white-space: nowrap;
   overflow: hidden;
 }
-.wrap_option > label:has(input[type=radio]) {
-  padding: 0.25em 0.5em;
-  border-right: 2px solid var(--option-color);
-  cursor: pointer;
-}
-.wrap_option > label:has(input[type=radio]):last-child {
-  border-right: none;
+.wrap_option div:not(:first-child) {
+  border-left: 2px solid var(--option-color);
 }
 .wrap_option input[type=radio] {
   -webkit-appearance: none;
      -moz-appearance: none;
           appearance: none;
 }
-.wrap_option > label:has(input[type=radio]:checked) {
+.wrap_option > :has(input[type=radio]:checked) {
   background-color: var(--option-color);
   color: white;
 }

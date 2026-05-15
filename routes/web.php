@@ -45,7 +45,11 @@ Route::get('builder', function () {
 Route::post('fetchapi', [NurikabeApiController::class, 'getBoard']);
 Route::post('history/recordWin', [HistoryController::class, 'recordWin']);
 Route::post('history/getPersonalsBest', [HistoryController::class, 'getPersonalsBest']);
+Route::post('history/fetchDateCompletedSizes', [HistoryController::class, 'fetchDateCompletedSizes']);
 
+Route::get('calendar/{year:year?}/{month:month?}', [NurikabeApiController::class, 'showCalendar'])
+    // ->middleware(['auth', 'verified'])
+    ->name('Calendar');
 
 
 Route::fallback(function(){
