@@ -70,6 +70,9 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
+      - name: Delete the artifact
+        run: rm release.zip
+
       - name: FTP Deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.3.3 # Use the FTP Deploy action
         with:
