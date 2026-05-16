@@ -33,6 +33,9 @@ jobs:
         if: steps.check_files.outputs.files_exists == 'true'
         run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
+      - name: Check if vendor is filled
+        run: dir vendor
+
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
