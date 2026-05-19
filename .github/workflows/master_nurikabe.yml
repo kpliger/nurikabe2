@@ -42,11 +42,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps # Use 'npm ci' for clean installs in CI environments
 
-      - name: Run build
-        run: npm run build
-
       - name: Compile SASS in pages
         run: npm run build:css-pages
+
+      - name: Run build
+        run: npm run build
 
       - name: Zip the application files
         # run: zip -r release.zip ./* -x node_modules/**\* vendor/**\*
