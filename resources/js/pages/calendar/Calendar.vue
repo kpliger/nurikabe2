@@ -83,7 +83,7 @@ function isValidDate(year:number, month:number, day:number):boolean{
 	const TODAY = new Date();
 	const minDate = new Date(2005,0,0);
 	const curDate = new Date(year,month-1,day);
-	return minDate<curDate && curDate<TODAY;
+	return minDate<curDate && curDate<TODAY && day>0;
 }
 function isBoardComplete(difficulty:string, year:number, month:number, day:number):boolean{
 	const curDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;

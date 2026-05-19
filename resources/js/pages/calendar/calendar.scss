@@ -1,12 +1,12 @@
 #tbl_calendar{
-  border-collapse: collapse;
+  border-collapse: separate;
   width: 100%;
   table-layout: fixed;
   text-align: left;
   thead{
-    background-color: rgba(0,0,0, 0.1);
+    background-color: rgba(127, 127, 255, 0.2);
     html.dark & {
-      background-color: rgba(255, 255, 255, 0.1);
+      background-color: rgba(127, 127, 255, 0.2);
     }
     th{
       text-align: center;
@@ -21,8 +21,13 @@
       padding:.25em;
       vertical-align: top;
       overflow: hidden;
+      border-radius: .25em;
+      background-color: rgba(0, 0, 0, 0.2);
       &.disabled{
         opacity: .3;
+      }
+      html.dark & {
+        background-color: rgba(127, 127, 127, 0.2);
       }
       .page-link{
         display:flex;

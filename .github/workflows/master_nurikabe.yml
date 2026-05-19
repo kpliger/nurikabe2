@@ -45,6 +45,9 @@ jobs:
       - name: Run build
         run: npm run build
 
+      - name: Compile SASS in pages
+        run: npm run build:css-pages
+
       - name: Zip the application files
         # run: zip -r release.zip ./* -x node_modules/**\* vendor/**\*
         run: zip -r release.zip ./*
