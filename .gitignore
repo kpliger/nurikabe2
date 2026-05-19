@@ -24,3 +24,4 @@ yarn-error.log
 /.zed
 /mysql.sql
 /resources/js/pages/*/*.css.map
+/resources/js/pages/*/*.css
