@@ -103,7 +103,7 @@ function isBoardComplete(difficulty:string, year:number, month:number, day:numbe
 	<Head title="Calendar" />
 
 	<AppLayout :breadcrumbs="breadcrumbs">
-		<div id='tictactoe' class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+		<div id='calendar' class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
 			<form class='container' @submit.prevent="gotoNewPage()">
 				<select  v-model="inputMonth">
 					<option v-for="(month,key) in MONTHS" :value=key>{{ month }}</option>

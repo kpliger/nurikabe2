@@ -33,7 +33,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const isDark = ref(true);
-const $loading = useLoading({});
+const loadingContainer = ref(null);
+let $loading:any;
 
 let scopeId:string = "";
 let zoomed = false;
@@ -66,6 +67,7 @@ const newPageLoader = ref();
 const rowInt = ref(5);
 const colInt = ref(5);
 let cvReady = ref(true);
+let el:any;
 
 let hasUpload = ref({show:false})
 
@@ -77,6 +79,11 @@ $(document).on('show.bs.modal', '.modal', async (event) =>{
 
 
 onMounted( async()=>{
+
+	$loading = useLoading({
+		container: loadingContainer.value,
+		opacity:.2,
+	});
 
 	if(window.cv==null){
 		const script = document.createElement('script');
@@ -127,7 +134,7 @@ onMounted( async()=>{
 	$('main').css('overflow', 'auto')
 	$('main').css('height', 'calc(100vh - 1em)')
 
-	scopeId = Object.keys($("#nurikabe").data()).find(elem => elem.includes('v-'));
+	scopeId = Object.keys($("#builder").data()).find(elem => elem.includes('v-'));
 	$('.modal-backdrop').remove()
 
 	if(localStorage.getItem('custom_board') !== null){
@@ -146,7 +153,7 @@ onUnmounted(()=>{
 
 watch(boardZoom, (val)=>{
 	// $('#gameboard').css('transform', 'scale('+val+')');
-	$('#nurikabe').css('--sqr_size', val+'px');
+	$('#builder').css('--sqr_size', val+'px');
 
 	const boardWrap:number = parseFloat($('#wrap_board').css('width').slice(0,-2));
 	const gameboard = colInt.value*val+1.7;
@@ -276,136 +283,152 @@ function recognizeImageToText(cell:any) {
 	})
 }
 const processImage = async (imgElement:any)=>{
+
 	const loader = $loading.show();
-
-	// 1. Load image and preprocess
-	let src = cv.imread(imgElement);
-
-	// Resize (scale up 2x)
-	// let dsize = new cv.Size(src.cols * 2, src.rows * 2);
-	// cv.resize(src, src, dsize, 0, 0, cv.INTER_CUBIC);
-
-	let darkMode = isImageDarkMode(src);
-
-	let gray = new cv.Mat();
-	cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY,0);
-
-	if(darkMode){
-		cv.bitwise_not(gray, gray);
-	}
-	// cv.GaussianBlur(gray, gray, new cv.Size(5,5), 0);
-
-
-	let thresh = new cv.Mat();
-	cv.adaptiveThreshold(
-			gray,
-			thresh,
-			255,
-			cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-			// cv.ADAPTIVE_THRESH_MEAN_C,
-			cv.THRESH_BINARY_INV,
-			11,
-			2
-	);
-
-
-	// 4. Extract grid lines
-	let vertical = new cv.Mat();
-	let horizontal = new cv.Mat();
-	let verticalKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(1, 45)	);
-	let horizontalKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(45, 1)	);
-	cv.erode(thresh, vertical, verticalKernel);
-	cv.dilate(vertical, vertical, verticalKernel);
-	cv.erode(thresh, horizontal, horizontalKernel);
-	cv.dilate(horizontal, horizontal, horizontalKernel);
-
-
-	// 5. Find grid intersections
-	let intersections = new cv.Mat();
-	cv.bitwise_and(horizontal, vertical, intersections);
-	// cv.addWeighted(horizontal, 1, vertical, 1, 0, intersections);
-
-	let contours = new cv.MatVector();
-	let hierarchy = new cv.Mat();
-	cv.findContours(
-			intersections,
-			contours,
-			hierarchy,
-			// cv.RETR_LIST,
-			cv.RETR_TREE,
-			cv.CHAIN_APPROX_SIMPLE
-	);
-
-	let points = [];
-	for (let i = 0; i < contours.size(); i++) {
-		let rect = cv.boundingRect(contours.get(i));
-		points.push({
-			x: rect.x + rect.width/2,
-			y: rect.y + rect.height/2
-		});
-	}
-
-	let rows = clusterRows(points);
-	if(rows.length<2 || rows[0].length<2){
-		console.log("Failed to detect grid");
-		return;
-	}
-
-	let numRows = rows.length - 1;
-	let numCols = rows[0].length - 1;
-
-	let cells = [];
-
-	for(let r=0;r<numRows;r++){
-		for(let c=0;c<numCols;c++){
-
-			let x1 = rows[r][c].x;
-			let y1 = rows[r][c].y;
-
-			let x2 = rows[r+1][c+1].x;
-			let y2 = rows[r+1][c+1].y;
-
-			let rect = new cv.Rect(
-					x1+2,
-					y1+2,
-					x2-x1-4,
-					y2-y1-4
-			);
-
-			let cell = src.roi(rect);
-
-			cells.push({
-					row:r,
-					col:c,
-					img:cell
-			});
-		}
-	}
-
-	// 9. OCR the numbers
-	let board = Array(numRows)
-		.fill()
-		.map(()=>Array(numCols).fill(""));
-
-	const promises = [];
-	for(let cell of cells){
-		if(!hasNumber(cell.img)) continue
-		promises.push(recognizeImageToText(cell));
-	}
-	const results = await Promise.all(promises);
-	for(let res of results){
-		board[res.row][res.col] = res.text;
-	}
-
-	applyImageData(board);
-
-	loader.hide();
 	$("#uploadModal").modal('hide');
 
-	// Cleanup
-	src.delete(); gray.delete(); thresh.delete();
-	vertical.delete(); horizontal.delete(); intersections.delete();
-	contours.delete(); hierarchy.delete();
+	let src = new cv.Mat();
+	let gray = new cv.Mat();
+	let thresh = new cv.Mat();
+	let vertical = new cv.Mat();
+	let horizontal = new cv.Mat();
+	let intersections = new cv.Mat();
+	let contours = new cv.MatVector();
+	let hierarchy = new cv.Mat();
+
+	try{
+
+			// 1. Load image and preprocess
+			src = cv.imread(imgElement);
+
+			// Resize (scale up 2x)
+			// let dsize = new cv.Size(src.cols * 2, src.rows * 2);
+			// cv.resize(src, src, dsize, 0, 0, cv.INTER_CUBIC);
+
+			let darkMode = isImageDarkMode(src);
+
+			gray = new cv.Mat();
+			cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY,0);
+
+			if(darkMode){
+				cv.bitwise_not(gray, gray);
+			}
+			// cv.GaussianBlur(gray, gray, new cv.Size(5,5), 0);
+
+
+			thresh = new cv.Mat();
+			cv.adaptiveThreshold(
+					gray,
+					thresh,
+					255,
+					cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+					// cv.ADAPTIVE_THRESH_MEAN_C,
+					cv.THRESH_BINARY_INV,
+					11,
+					2
+			);
+
+
+			// 4. Extract grid lines
+			vertical = new cv.Mat();
+			horizontal = new cv.Mat();
+			let verticalKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(1, 45)	);
+			let horizontalKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(45, 1)	);
+			cv.erode(thresh, vertical, verticalKernel);
+			cv.dilate(vertical, vertical, verticalKernel);
+			cv.erode(thresh, horizontal, horizontalKernel);
+			cv.dilate(horizontal, horizontal, horizontalKernel);
+
+
+			// 5. Find grid intersections
+			intersections = new cv.Mat();
+			cv.bitwise_and(horizontal, vertical, intersections);
+			// cv.addWeighted(horizontal, 1, vertical, 1, 0, intersections);
+
+			contours = new cv.MatVector();
+			hierarchy = new cv.Mat();
+			cv.findContours(
+					intersections,
+					contours,
+					hierarchy,
+					// cv.RETR_LIST,
+					cv.RETR_TREE,
+					cv.CHAIN_APPROX_SIMPLE
+			);
+
+			let points = [];
+			for (let i = 0; i < contours.size(); i++) {
+				let rect = cv.boundingRect(contours.get(i));
+				points.push({
+					x: rect.x + rect.width/2,
+					y: rect.y + rect.height/2
+				});
+			}
+
+			let rows = clusterRows(points);
+			if(rows.length<2 || rows[0].length<2){
+				throw "Failed to detect grid";
+			}
+
+			let numRows = rows.length - 1;
+			let numCols = rows[0].length - 1;
+
+			let cells = [];
+
+			for(let r=0;r<numRows;r++){
+				for(let c=0;c<numCols;c++){
+
+					let x1 = rows[r][c].x;
+					let y1 = rows[r][c].y;
+
+					let x2 = rows[r+1][c+1].x;
+					let y2 = rows[r+1][c+1].y;
+
+					let rect = new cv.Rect(
+							x1+2,
+							y1+2,
+							x2-x1-4,
+							y2-y1-4
+					);
+
+					let cell = src.roi(rect);
+
+					cells.push({
+							row:r,
+							col:c,
+							img:cell
+					});
+				}
+			}
+
+			// 9. OCR the numbers
+			let board = Array(numRows)
+				.fill()
+				.map(()=>Array(numCols).fill(""));
+
+			const promises = [];
+			for(let cell of cells){
+				if(!hasNumber(cell.img)) continue
+				promises.push(recognizeImageToText(cell));
+			}
+			const results:any = await Promise.all(promises);
+			for(let res of results){
+				board[res.row][res.col] = res.text;
+			}
+
+			applyImageData(board);
+
+	}catch(ex){
+		alert(ex)
+	}finally{
+			loader.hide();
+
+			// Cleanup
+			src.delete(); gray.delete(); thresh.delete();
+			vertical.delete(); horizontal.delete(); intersections.delete();
+			contours.delete(); hierarchy.delete();
+
+	}
 }
 const showImagePreview = ()=>{
 	hasUpload.value.show=true;
@@ -543,11 +566,11 @@ function ucfirst(str) {
 // ++++++PINCH
 
 // Global vars to cache event state
-const evCache = [];
+const evCache:any = [];
 let prevDiff = 100000;
 let prevCoord = [100000,100000, true];
 // Install event handlers for the pointer target
-let el;
+
 
 
 function pointerdownHandler(ev) {
@@ -631,11 +654,13 @@ function pointerupHandler(ev) {
 
 // import 'bootstrap/dist/css/bootstrap.min.css'
 
+import './builder.css';
+
 </script>
 <style lang='css' scoped>
 	@import url('bootstrap/dist/css/bootstrap.min.css');
 	@import url('https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.css');
-	@import url('./builder.css');
+	/* @import url('./builder.css'); */
 
 </style>
 
@@ -648,7 +673,7 @@ function pointerupHandler(ev) {
 		@wheel.keyup.ctrl.stop.prevent="scrollZoom($event)"
 
 	>
-		<div id='nurikabe' class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4"
+		<div id='builder' class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4"
 			ref="loadingContainer"
 		>
 			<div id='wrap_gameactions'>
@@ -752,7 +777,7 @@ function pointerupHandler(ev) {
 							<input type="file" id="fileInput" name="file"
 								accept="image/*"/>
 
-							<img id="imageSrc" alt="No Image"
+							<img id="imageSrc" alt="No Image" :class="hasUpload"
 								style="border:1px solid white; max-height: 20em; margin:auto;"/>
 
 						</div>
@@ -763,7 +788,6 @@ function pointerupHandler(ev) {
 					</div>
 				</div>
 			</div><!-- end Modal-->
-
 
 		</div>
 	</AppLayout>

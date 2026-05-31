@@ -17,7 +17,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PlaceholderPattern from '../../components/PlaceholderPattern.vue';
 import {onMounted, ref, watch, toRaw, useTemplateRef, useId, onUnmounted, onBeforeUnmount, compileToFunction} from 'vue';
 
-import "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+import "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js";
 
 // https://kamranahmed.info/toast
 import "https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.js"
@@ -48,8 +48,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 		href: '/board',
 	},
 ];
-const $loading = useLoading({});
-const overlayContinue = ref(false);
+const loadingContainer = ref(null);
+let $loading:any;
 const isDark = ref(true);
 
 let scopeId:string = "";
@@ -130,7 +130,7 @@ const move = ref<any[]>([]);
 const move_r = ref<any[]>([]);
 
 const difficulty = ref<string>('');
-const date = ref();
+const inputDate = ref();
 
 const newDifficulty = ref();
 const dateFilter = ref();
@@ -198,6 +198,10 @@ $(document).on('change',".dropdownAction", event => {
 // })
 
 onMounted( async()=>{
+	$loading = useLoading({
+		container: loadingContainer.value,
+		opacity:.2,
+	});
 	$(document).on('scroll', "main", (event)=> {
 		event.stopPropagation();
 		console.log(event.target)
@@ -221,8 +225,10 @@ onMounted( async()=>{
 	addTouchListeners()
 
 
-	$('main').css('overflow', 'auto');
-	$('main').css('height', 'calc(100vh - 1em)');
+	// $('main').css({
+	// 	'overflow':'auto',
+	// 	'height':'calc(100vh - 1em)',
+	// });
 	// $('main').css('position', 'relative');
 	$('#btnRedo').focus();
 
@@ -244,23 +250,23 @@ onMounted( async()=>{
 	if(initMonth.length<2) initMonth = '0'+initMonth;
 	if(initDay.length<2) initDay = '0'+initDay;
 	initDate = `${props.year||''}-${initMonth}-${initDay}T01:00:00${timezoneoffset}`
-	date.value = new Date(initDate);
-	if(date.value == 'Invalid Date'){
+	inputDate.value = new Date(initDate);
+	if(inputDate.value == 'Invalid Date'){
 		if(props.day!==null){
 			router.get(`/board/${difficulty.value}`)
 			return;
 		}else{
-			date.value = new Date();
+			inputDate.value = new Date();
 		}
 
-	}else if(date.value.getTime()<minDate || date.value.getTime()>maxDate){
+	}else if(inputDate.value.getTime()<minDate || inputDate.value.getTime()>maxDate){
 		router.get(`/board/${difficulty.value}`)
 		return;
 	}
 
-	let slashDate = date.value.getFullYear()+"/"+
-		(date.value.getMonth()+1)+"/"+
-		date.value.getDate();
+	let slashDate = inputDate.value.getFullYear()+"/"+
+		(inputDate.value.getMonth()+1)+"/"+
+		inputDate.value.getDate();
 	dateFilter.value = slashDate;
 	newDifficulty.value = difficulty.value;
 
@@ -374,8 +380,11 @@ watch(move,val=>{
 
 
 },  { deep: true })
-watch(date, async (val,prev)=>{
+watch(inputDate, async (val,prev)=>{
 	try {
+
+		completedSizes.value = ["waiting"];
+
 		if(prev != undefined && val != undefined && val.getTime() == prev.getTime()) return;
 		if(user === null) return;
 
@@ -1391,9 +1400,9 @@ function gotoNewPage(){
 	try{
 		const newUrl = route('Board', [
 			newDifficulty.value,
-			date.value.getFullYear(),
-			date.value.getMonth()+1,
-			date.value.getDate(),
+			inputDate.value.getFullYear(),
+			inputDate.value.getMonth()+1,
+			inputDate.value.getDate(),
 		])
 		$('.modal').modal('hide')
 		newPageLoader.value = $loading.show()
@@ -1410,9 +1419,9 @@ async function getPersonalBest(){
 
 		$("#flag_pb").hide();
 		if(user === null) return;
-		let slashDate = date.value.getFullYear()+ '-'+
-			('0'+(date.value.getMonth()+1)).slice(-2)+ '-'+
-			('0'+date.value.getDate()).slice(-2)
+		let slashDate = inputDate.value.getFullYear()+ '-'+
+			('0'+(inputDate.value.getMonth()+1)).slice(-2)+ '-'+
+			('0'+inputDate.value.getDate()).slice(-2)
 
 		const v = await axios.post(
 			"/history/getPersonalsBest",
@@ -1542,7 +1551,7 @@ function randomFetch(){
 	}while(the_date.getTime() > Date.now())
 
 	newDifficulty.value = difficulties.value[the_difficulty]
-	date.value = the_date
+	inputDate.value = the_date
 
 	gotoNewPage()
 
@@ -1550,9 +1559,9 @@ function randomFetch(){
 async function recordWin(){
 	if(difficulty.value == 'custom') return;// dont save custom board
 
-	const winDate = date.value.getFullYear()+ '-'+
-		('0'+(date.value.getMonth()+1)).slice(-2)+ '-'+
-		('0'+date.value.getDate()).slice(-2)
+	const winDate = inputDate.value.getFullYear()+ '-'+
+		('0'+(inputDate.value.getMonth()+1)).slice(-2)+ '-'+
+		('0'+inputDate.value.getDate()).slice(-2)
 	let formData ={
 		difficulty: difficulty.value,
 		date: winDate,
@@ -2660,13 +2669,14 @@ $(document).on('scroll', "*", (event)=> {
 //     //     console.log("User scrolled down more than 100px");
 //     // }
 // });
+import './board.css';
 
 </script>
 <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script> -->
 <style lang='css' scoped>
 	@import url('bootstrap/dist/css/bootstrap.min.css');
 	@import url('https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.css');
-	@import url('./board.css');
+	/* @import url('./board.css'); */
 
 </style>
 
@@ -2689,11 +2699,6 @@ $(document).on('scroll', "*", (event)=> {
 			@click.exact='resetHighlighting()'
 			ref="loadingContainer"
 		>
-			<loading id="continueLoader" v-model:active="overlayContinue" :can-cancel="true"
-				:on-cancel="handleContinueLoader"
-			>
-				<div class="loaderText">Click to continue</div>
-			</loading>
 			<div class="d-flex justify-between items-baseline">
 				<h4>{{ ucfirst(difficulty) }}: {{ dateFilter }} </h4>
 				<button type="button" class="btn btn-outline-primary" @click="showHelp" style="font-size:1.5em">&#9432;</button>
@@ -2879,33 +2884,33 @@ $(document).on('scroll', "*", (event)=> {
 					</div>
 					<div class="modal-body">
 						<table id='tbl_filter' style="width:100%;">
-							<!-- <input type='file' id='inputFile' value="F:\Porfolio\Nurikabe Solver\puzzles\puzzle001.csv">
-							<input type='button' value='Submit' class="btn btn-primary" onclick="$('#inputFile').change()"> -->
-							<select name='' id='ddlPuzzle' autocomplete="off" style='display: none;'>
-								<option value=''>Select item</option>
-								<!-- <?php foreach ($files1 as $key => $value) {
-									if (in_array($value,array(".",".."))) continue;
-									echo "<option>$value</option>";
-								}?> -->
-							</select>
 							<tr>
 								<td>
 									Size <br>
+
 									<div class="flex">
-										<div class="wrap_option">
-											<div v-for="(difficulty) in difficulties"><label>
+										<div id='wrap_size' class="wrap_option">
+											<div class='option-item' v-for="(difficulty) in difficulties"><label>
 												<input type="radio" name="difficulty" :value="difficulty" v-model="newDifficulty">
 												{{ ucfirst(difficulty) }}
 												<template v-if="completedSizes.includes(difficulty)">✓</template>
 											</label></div>
+											<span role="status" v-show="completedSizes.includes('waiting')">
+												<svg aria-hidden="true" class="w-4 h-4 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+													<path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+													<path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
+												</svg>
+												<span class="sr-only">Loading...</span>
+											</span>
 										</div>
 									</div>
+
 								</td>
 							</tr>
 							<tr>
 								<td>
 									Date
-									<VueDatePicker id='api_date' v-model="date" inline auto-apply :enable-time-picker="false"
+									<VueDatePicker id='api_date' v-model="inputDate" inline auto-apply :enable-time-picker="false"
 										class="justify-center"
 										:dark="isDark" week-start="0"
 										:min-date="new Date('2005/01/01')"
