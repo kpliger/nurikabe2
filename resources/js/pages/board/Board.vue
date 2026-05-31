@@ -61,6 +61,7 @@ const props = defineProps({
 	year: String,
 	month: String,
 	day: String,
+	env: String,
 })
 
 
@@ -1759,6 +1760,9 @@ async function calculateIslandSizeOnStart(){
 	})
 }
 function cellStatus(x:number,y:number){
+
+	if(props.env == 'production') return "";
+
 	let status = `${x},${y}\n`;
 
 	Object.entries(boardClass.value[x][y]).forEach(([key, value]) => {

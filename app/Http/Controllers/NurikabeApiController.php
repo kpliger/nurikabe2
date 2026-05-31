@@ -29,7 +29,8 @@ class NurikabeApiController extends Controller
 			"size"	=> $size,
 			"year"	=> $year,
 			"month"	=> $month,
-			"day"	=> $day,
+			"day"		=> $day,
+			"env" 	=> env('APP_ENV'),
 		]);
 	}
 
