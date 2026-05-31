@@ -383,11 +383,11 @@ watch(move,val=>{
 },  { deep: true })
 watch(inputDate, async (val,prev)=>{
 	try {
+		if(user === null) return;
 
 		completedSizes.value = ["waiting"];
 
 		if(prev != undefined && val != undefined && val.getTime() == prev.getTime()) return;
-		if(user === null) return;
 
 		let slashDate = val.getFullYear()+ '-'+
 			('0'+(val.getMonth()+1)).slice(-2)+ '-'+
@@ -552,7 +552,7 @@ function constructCustomBoard(){
 	}
 }
 function continueBoard(){
-	overlayContinue.value = true;
+	// overlayContinue.value = true;
 
 	board.value = JSON.parse(localStorage.getItem('board_continue')??"[[ ]]");
 	move.value = JSON.parse(localStorage.getItem('move_continue')??"[[ ]]");
